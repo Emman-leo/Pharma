@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Inventory Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pharmacy Inventory Tracker</h1>
+            <nav>
+                <button id="inventoryBtn" class="nav-btn active">Inventory</button>
+                <button id="salesBtn" class="nav-btn">Sales</button>
+                <button id="reportsBtn" class="nav-btn">Reports</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Inventory Section -->
+            <section id="inventorySection" class="section active">
+                <h2>Inventory Management</h2>
+                
+                <div class="form-container">
+                    <h3>Add New Product</h3>
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="form-group">
+                            <label for="productName">Product Name:</label>
+                            <input type="text" id="productName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productPrice">Price ($):</label>
+                            <input type="number" id="productPrice" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productQuantity">Quantity:</label>
+                            <input type="number" id="productQuantity" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory">Category:</label>
+                            <select id="productCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="Prescription">Prescription</option>
+                                <option value="OTC">Over-the-Counter</option>
+                                <option value="Medical Supply">Medical Supply</option>
+                                <option value="Cosmetic">Cosmetic</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="saveProductBtn">Save Product</button>
+                        <button type="button" id="cancelEditBtn" style="display:none;">Cancel</button>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <h3>Current Inventory</h3>
+                    <input type="text" id="searchInput" placeholder="Search products...">
+                    <table id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryBody">
+                            <!-- Product rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sales Section -->
+            <section id="salesSection" class="section">
+                <h2>Sales Management</h2>
+                
+                <div class="form-container">
+                    <h3>Record Sale</h3>
+                    <form id="saleForm">
+                        <div class="form-group">
+                            <label for="saleProduct">Product:</label>
+                            <select id="saleProduct" required>
+                                <option value="">Select Product</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="saleQuantity">Quantity Sold:</label>
+                            <input type="number" id="saleQuantity" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="saleCustomer">Customer (Optional):</label>
+                            <input type="text" id="saleCustomer">
+                        </div>
+                        <button type="submit">Record Sale</button>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <h3>Recent Sales</h3>
+                    <table id="salesTable">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Total Price</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesBody">
+                            <!-- Sale rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reportsSection" class="section">
+                <h2>Reports & Analytics</h2>
+                
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Total Products</h3>
+                        <p id="totalProducts">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Items in Stock</h3>
+                        <p id="totalStock">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Low Stock Items</h3>
+                        <p id="lowStockCount">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Today's Sales</h3>
+                        <p id="todaysSales">$0.00</p>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Low Stock Alert</h3>
+                    <table id="lowStockTable">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Current Quantity</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowStockBody">
+                            <!-- Low stock items will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
