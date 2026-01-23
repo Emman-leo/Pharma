@@ -49,12 +49,11 @@ async function loadPharmacies() {
         const { data, error } = await supabaseClient
             .from('pharmacies')
             .select('id, name')
+            .eq('is_active', true)
             .order('name');
         
         if (error) {
             console.error('Error loading pharmacies:', error);
-            // If there's an error, we'll still allow manual entry for now
-            // In a real implementation, you'd want to handle this differently
             return;
         }
         
@@ -91,9 +90,34 @@ loginBtn.addEventListener('click', async () => {
         return;
     }
     
-    // For now, we'll simulate authentication
-    // In a real implementation, you would verify credentials against your database
     try {
+        // Verify the user credentials against the database
+        const { data: user, error: userError } = await supabaseClient
+            .from('users')
+            .select(`
+                id,
+                username,
+                role,
+                pharmacies(name)
+            `)
+            .eq('pharmacy_id', selectedPharmacyId)
+            .eq('username', username)
+            .eq('is_active', true)
+            .single();
+        
+        if (userError) {
+            console.error('Authentication error:', userError);
+            alert('Invalid credentials. Please check your username and password.');
+            return;
+        }
+
+        // For this simplified implementation, we'll verify the password
+        // In a real application, passwords should be hashed and compared securely
+        if (password !== user.password_hash) {
+            alert('Invalid password. Please check your credentials.');
+            return;
+        }
+        
         // Get pharmacy details
         const { data: pharmacy, error: pharmacyError } = await supabaseClient
             .from('pharmacies')
@@ -107,16 +131,19 @@ loginBtn.addEventListener('click', async () => {
             return;
         }
         
-        // For demo purposes, we'll simulate authentication
-        // In a real app, you would verify the username and password against a users table
+        // Set current session
         currentPharmacy = {
             id: selectedPharmacyId,
             name: pharmacy.name
         };
-        currentUser = username;
+        currentUser = {
+            id: user.id,
+            username: user.username,
+            role: user.role
+        };
         
         // Update UI
-        currentUserDisplay.textContent = currentUser;
+        currentUserDisplay.textContent = currentUser.username;
         currentPharmacyDisplay.textContent = currentPharmacy.name;
         dashboardTitle.textContent = `${currentPharmacy.name} Dashboard`;
         
