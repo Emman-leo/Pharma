@@ -1,7 +1,7 @@
 // Initialize Supabase client
 const supabaseUrl = 'https://idjbruyuhyyyoucivksj.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkamJydXl1aHl5eW91Y2l2a3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjc1MDksImV4cCI6MjA4NDYwMzUwOX0.uSxJidEC-S-z0ZMCMb2Bv14Q1EedgqKk4hTMx_EqHmU';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // DOM Elements
 const inventorySection = document.getElementById('inventorySection');
@@ -70,7 +70,7 @@ productForm.addEventListener('submit', async (e) => {
     
     if (currentEditProductId) {
         // Update existing product
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('products')
             .update({ name, price, quantity, category })
             .eq('id', currentEditProductId);
@@ -85,7 +85,7 @@ productForm.addEventListener('submit', async (e) => {
         }
     } else {
         // Insert new product
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('products')
             .insert([{ name, price, quantity, category }]);
         
@@ -108,7 +108,7 @@ saleForm.addEventListener('submit', async (e) => {
     const customer = document.getElementById('saleCustomer').value || null;
     
     // Get product details
-    const { data: product, error: productError } = await supabase
+    const { data: product, error: productError } = await supabaseClient
         .from('products')
         .select('*')
         .eq('id', productId)
@@ -130,7 +130,7 @@ saleForm.addEventListener('submit', async (e) => {
     const totalPrice = quantitySold * product.price;
     
     // Insert sale record
-    const { error: saleError } = await supabase
+    const { error: saleError } = await supabaseClient
         .from('sales')
         .insert([{
             product_id: productId,
@@ -147,7 +147,7 @@ saleForm.addEventListener('submit', async (e) => {
     
     // Update product quantity
     const newQuantity = product.quantity - quantitySold;
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
         .from('products')
         .update({ quantity: newQuantity })
         .eq('id', productId);
@@ -167,7 +167,7 @@ saleForm.addEventListener('submit', async (e) => {
 
 // Load inventory data
 async function loadInventory(searchTerm = '') {
-    let query = supabase
+    let query = supabaseClient
         .from('products')
         .select('*')
         .order('name');
@@ -208,7 +208,7 @@ async function loadInventory(searchTerm = '') {
 
 // Load sales data
 async function loadSales() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('sales')
         .select(`
             id,
@@ -244,7 +244,7 @@ async function loadSales() {
 
 // Load products for sale dropdown
 async function loadProductsForSale() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('products')
         .select('id, name, quantity')
         .order('name');
@@ -269,7 +269,7 @@ async function loadProductsForSale() {
 // Load report data
 async function loadReports() {
     // Load inventory stats
-    const { count: totalProducts, error: countError } = await supabase
+    const { count: totalProducts, error: countError } = await supabaseClient
         .from('products')
         .select('*', { count: 'exact' });
     
@@ -278,7 +278,7 @@ async function loadReports() {
     }
     
     // Calculate total stock
-    const { data: inventoryData, error: inventoryError } = await supabase
+    const { data: inventoryData, error: inventoryError } = await supabaseClient
         .from('products')
         .select('quantity');
     
@@ -288,7 +288,7 @@ async function loadReports() {
     }
     
     // Count low stock items
-    const { count: lowStockCount, error: lowStockError } = await supabase
+    const { count: lowStockCount, error: lowStockError } = await supabaseClient
         .from('products')
         .select('*', { count: 'exact' })
         .lte('quantity', 5);
@@ -299,7 +299,7 @@ async function loadReports() {
     
     // Calculate today's sales
     const today = new Date().toISOString().split('T')[0];
-    const { data: dailySales, error: salesError } = await supabase
+    const { data: dailySales, error: salesError } = await supabaseClient
         .from('sales')
         .select('total_price')
         .gte('sale_date', `${today} 00:00:00`)
@@ -311,7 +311,7 @@ async function loadReports() {
     }
     
     // Load low stock items
-    const { data: lowStockItems, error: lowStockItemsError } = await supabase
+    const { data: lowStockItems, error: lowStockItemsError } = await supabaseClient
         .from('products')
         .select('*')
         .lte('quantity', 5)
@@ -334,7 +334,7 @@ async function loadReports() {
 
 // Edit product
 async function editProduct(id) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('products')
         .select('*')
         .eq('id', id)
@@ -364,7 +364,7 @@ async function editProduct(id) {
 // Delete product
 async function deleteProduct(id) {
     if (confirm('Are you sure you want to delete this product?')) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('products')
             .delete()
             .eq('id', id);
