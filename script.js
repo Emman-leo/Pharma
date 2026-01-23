@@ -43,116 +43,96 @@ let currentPharmacy = null;
 let currentUser = null;
 let currentEditProductId = null;
 
-// Load pharmacies for the dropdown
-async function loadPharmacies() {
+// Check if user is already logged in
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        await initializeApp(session.user);
+    } else {
+        showLoginScreen();
+    }
+}
+
+// Show login screen
+function showLoginScreen() {
+    welcomeScreen.classList.add('active');
+    mainApp.classList.remove('active');
+}
+
+// Initialize the app with authenticated user
+async function initializeApp(user) {
     try {
-        const { data, error } = await supabaseClient
-            .from('pharmacies')
-            .select('id, name')
+        // Get user's pharmacy association
+        const { data: userPharmacy, error: pharmacyError } = await supabaseClient
+            .from('user_pharmacies')
+            .select(`
+                role,
+                pharmacies(id, name)
+            `)
+            .eq('user_id', user.id)
             .eq('is_active', true)
-            .order('name');
-        
-        if (error) {
-            console.error('Error loading pharmacies:', error);
+            .single();
+
+        if (pharmacyError) {
+            console.error('Error fetching user pharmacy:', pharmacyError);
+            alert('User not associated with any pharmacy. Please contact administrator.');
+            await supabaseClient.auth.signOut();
             return;
         }
-        
-        // Clear existing options except the first one
-        pharmacySelect.innerHTML = '<option value="">Choose your pharmacy</option>';
-        
-        // Add pharmacies to the dropdown
-        if (data && data.length > 0) {
-            data.forEach(pharmacy => {
-                const option = document.createElement('option');
-                option.value = pharmacy.id;
-                option.textContent = pharmacy.name;
-                pharmacySelect.appendChild(option);
-            });
-        } else {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'No pharmacies available';
-            pharmacySelect.appendChild(option);
-        }
+
+        // Set current session
+        currentPharmacy = {
+            id: userPharmacy.pharmacies.id,
+            name: userPharmacy.pharmacies.name
+        };
+        currentUser = {
+            id: user.id,
+            email: user.email,
+            role: userPharmacy.role
+        };
+
+        // Update UI
+        currentUserDisplay.textContent = currentUser.email;
+        currentPharmacyDisplay.textContent = currentPharmacy.name;
+        dashboardTitle.textContent = `${currentPharmacy.name} Dashboard`;
+
+        // Switch to main app
+        welcomeScreen.classList.remove('active');
+        mainApp.classList.add('active');
+
+        // Load inventory
+        await loadInventory();
     } catch (error) {
-        console.error('Error in loadPharmacies:', error);
+        console.error('Error initializing app:', error);
+        alert('Error initializing application. Please try logging in again.');
+        await supabaseClient.auth.signOut();
     }
 }
 
 // Login event
 loginBtn.addEventListener('click', async () => {
-    const selectedPharmacyId = pharmacySelect.value;
-    const username = usernameInput.value.trim();
+    const email = usernameInput.value.trim();
     const password = passwordInput.value.trim();
     
-    if (!selectedPharmacyId || !username || !password) {
-        alert('Please fill in all fields');
+    if (!email || !password) {
+        alert('Please enter both email and password');
         return;
     }
     
     try {
-        // Verify the user credentials against the database
-        const { data: user, error: userError } = await supabaseClient
-            .from('users')
-            .select(`
-                id,
-                username,
-                role,
-                pharmacies(name)
-            `)
-            .eq('pharmacy_id', selectedPharmacyId)
-            .eq('username', username)
-            .eq('is_active', true)
-            .single();
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
         
-        if (userError) {
-            console.error('Authentication error:', userError);
-            alert('Invalid credentials. Please check your username and password.');
-            return;
-        }
-
-        // For this simplified implementation, we'll verify the password
-        // In a real application, passwords should be hashed and compared securely
-        if (password !== user.password_hash) {
-            alert('Invalid password. Please check your credentials.');
+        if (error) {
+            console.error('Login error:', error);
+            alert('Invalid credentials. Please check your email and password.');
             return;
         }
         
-        // Get pharmacy details
-        const { data: pharmacy, error: pharmacyError } = await supabaseClient
-            .from('pharmacies')
-            .select('name')
-            .eq('id', selectedPharmacyId)
-            .single();
-        
-        if (pharmacyError) {
-            console.error('Error fetching pharmacy:', pharmacyError);
-            alert('Invalid pharmacy selected');
-            return;
-        }
-        
-        // Set current session
-        currentPharmacy = {
-            id: selectedPharmacyId,
-            name: pharmacy.name
-        };
-        currentUser = {
-            id: user.id,
-            username: user.username,
-            role: user.role
-        };
-        
-        // Update UI
-        currentUserDisplay.textContent = currentUser.username;
-        currentPharmacyDisplay.textContent = currentPharmacy.name;
-        dashboardTitle.textContent = `${currentPharmacy.name} Dashboard`;
-        
-        // Switch to main app
-        welcomeScreen.classList.remove('active');
-        mainApp.classList.add('active');
-        
-        // Load inventory
-        await loadInventory();
+        // Initialize app with authenticated user
+        await initializeApp(data.user);
     } catch (error) {
         console.error('Login error:', error);
         alert('Authentication failed. Please check your credentials.');
@@ -160,19 +140,33 @@ loginBtn.addEventListener('click', async () => {
 });
 
 // Logout event
-logoutBtn.addEventListener('click', () => {
-    // Clear session data
-    currentPharmacy = null;
-    currentUser = null;
-    
-    // Reset form
-    pharmacySelect.value = '';
-    usernameInput.value = '';
-    passwordInput.value = '';
-    
-    // Switch back to welcome screen
-    mainApp.classList.remove('active');
-    welcomeScreen.classList.add('active');
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await supabaseClient.auth.signOut();
+        
+        // Clear session data
+        currentPharmacy = null;
+        currentUser = null;
+        
+        // Reset form
+        usernameInput.value = '';
+        passwordInput.value = '';
+        
+        // Switch back to welcome screen
+        mainApp.classList.remove('active');
+        welcomeScreen.classList.add('active');
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+});
+
+// Listen for auth state changes
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+        await initializeApp(session.user);
+    } else if (event === 'SIGNED_OUT') {
+        showLoginScreen();
+    }
 });
 
 // Mobile menu toggle
@@ -236,7 +230,7 @@ productForm.addEventListener('submit', async (e) => {
     const quantity = parseInt(document.getElementById('productQuantity').value);
     const category = document.getElementById('productCategory').value;
     
-    // Add pharmacy ID to the data (using pharmacy name as identifier for now)
+    // Add pharmacy ID to the data
     const productData = {
         name,
         price,
@@ -250,8 +244,7 @@ productForm.addEventListener('submit', async (e) => {
         const { error } = await supabaseClient
             .from('products')
             .update(productData)
-            .eq('id', currentEditProductId)
-            .eq('pharmacy_id', currentPharmacy.id); // Ensure we only update products from this pharmacy
+            .eq('id', currentEditProductId);
         
         if (error) {
             console.error('Error updating product:', error);
@@ -285,12 +278,11 @@ saleForm.addEventListener('submit', async (e) => {
     const quantitySold = parseInt(document.getElementById('saleQuantity').value);
     const customer = document.getElementById('saleCustomer').value || null;
     
-    // Get product details (ensuring it belongs to current pharmacy)
+    // Get product details
     const { data: product, error: productError } = await supabaseClient
         .from('products')
         .select('*')
         .eq('id', productId)
-        .eq('pharmacy_id', currentPharmacy.id)
         .single();
     
     if (productError) {
@@ -330,8 +322,7 @@ saleForm.addEventListener('submit', async (e) => {
     const { error: updateError } = await supabaseClient
         .from('products')
         .update({ quantity: newQuantity })
-        .eq('id', productId)
-        .eq('pharmacy_id', currentPharmacy.id);
+        .eq('id', productId);
     
     if (updateError) {
         console.error('Error updating product quantity:', updateError);
@@ -644,12 +635,8 @@ searchInput.addEventListener('input', (e) => {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initially show the welcome screen
-    welcomeScreen.classList.add('active');
-    mainApp.classList.remove('active');
-    
-    // Load pharmacies for the dropdown
-    await loadPharmacies();
+    // Check if user is already logged in
+    await checkSession();
     
     // Check if Supabase is configured properly
     if (supabaseUrl.includes('YOUR_PROJECT') || supabaseKey.includes('YOUR_ANON_KEY')) {

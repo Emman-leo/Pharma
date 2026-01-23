@@ -1,11 +1,11 @@
 # MediTrack - Pharmacy Inventory Management System
 
-A professional web application for pharmacies to track sales and manage inventory using HTML, CSS, JavaScript, and Supabase for the backend. Features secure multi-pharmacy access with controlled registration.
+A professional web application for pharmacies to track sales and manage inventory using HTML, CSS, JavaScript, and Supabase for the backend. Features secure multi-pharmacy access with Supabase authentication.
 
 ## Features
 
 - **Secure Multi-Pharmacy Access**: Controlled access through registered pharmacy accounts
-- **Role-Based Authentication**: Secure login with username and password
+- **Supabase Authentication**: Proper email/password authentication
 - **Pharmacy Registration**: Admin-managed pharmacy registration system
 - **Inventory Management**: Add, edit, and delete products with name, price, quantity, and category
 - **Sales Tracking**: Record sales transactions and automatically update inventory
@@ -24,7 +24,13 @@ A professional web application for pharmacies to track sales and manage inventor
 2. Create a new project
 3. Wait for the project to be provisioned (this may take a minute)
 
-### 2. Set up the Database Tables
+### 2. Enable Supabase Authentication
+
+1. In your Supabase dashboard, go to "Authentication" → "Providers"
+2. Enable "Email" provider
+3. Optionally configure email templates and settings
+
+### 3. Set up the Database Tables
 
 In your Supabase dashboard, go to the SQL Editor and run these SQL commands:
 
@@ -37,16 +43,15 @@ CREATE TABLE pharmacies (
   is_active BOOLEAN DEFAULT true
 );
 
--- Create users table for pharmacy staff authentication
-CREATE TABLE users (
+-- Create user_pharmacies table to link users to pharmacies
+CREATE TABLE user_pharmacies (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   pharmacy_id UUID REFERENCES pharmacies(id) ON DELETE CASCADE,
-  username VARCHAR(100) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(50) DEFAULT 'staff',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   is_active BOOLEAN DEFAULT true,
-  UNIQUE(pharmacy_id, username)
+  UNIQUE(user_id, pharmacy_id)
 );
 
 -- Create products table with pharmacy_id for multi-tenant support
@@ -76,6 +81,8 @@ CREATE INDEX idx_products_pharmacy ON products(pharmacy_id);
 CREATE INDEX idx_sales_pharmacy ON sales(pharmacy_id);
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_pharmacies_active ON pharmacies(is_active) WHERE is_active = true;
+CREATE INDEX idx_user_pharmacies_user ON user_pharmacies(user_id);
+CREATE INDEX idx_user_pharmacies_pharmacy ON user_pharmacies(pharmacy_id);
 
 -- Insert sample pharmacies (optional, for testing)
 INSERT INTO pharmacies (name) VALUES 
@@ -83,42 +90,46 @@ INSERT INTO pharmacies (name) VALUES
   ('HealthPlus Drugstore'),
   ('Wellness Corner'),
   ('CareFirst Pharmacy');
-  
--- Insert sample users (use a strong password hash in production)
--- For testing, we'll use a simple hash that can be matched in our app
-INSERT INTO users (pharmacy_id, username, password_hash, role) VALUES 
-  ((SELECT id FROM pharmacies WHERE name = 'Sunshine Pharmacy'), 'admin', 'admin123', 'manager'),
-  ((SELECT id FROM pharmacies WHERE name = 'HealthPlus Drugstore'), 'staff', 'staff123', 'staff'),
-  ((SELECT id FROM pharmacies WHERE name = 'Wellness Corner'), 'manager', 'manager123', 'manager'),
-  ((SELECT id FROM pharmacies WHERE name = 'CareFirst Pharmacy'), 'user', 'user123', 'staff');
 ```
 
-### 3. Configure Row Level Security (RLS) - For Development
+### 4. Configure Row Level Security (RLS)
 
-For development purposes, you can disable RLS temporarily to test the application:
-
-```sql
--- Disable RLS for development (NOT for production)
-ALTER TABLE products DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sales DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pharmacies DISABLE ROW LEVEL SECURITY;
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-```
-
-### 4. For Production - Configure Row Level Security (RLS)
-
-For production, enable Row Level Security in Supabase:
+Enable Row Level Security and create policies:
 
 ```sql
--- Enable RLS on tables
+-- Enable RLS on all tables
+ALTER TABLE pharmacies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_pharmacies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pharmacies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Create policies for data isolation
--- Note: This requires implementing proper authentication in your application
--- which is beyond the scope of this simple implementation
+-- Create policies for pharmacies table
+CREATE POLICY "Users can view active pharmacies" ON pharmacies
+  FOR SELECT USING (is_active = true);
+
+-- Create policies for user_pharmacies table
+CREATE POLICY "Users can view their own pharmacy associations" ON user_pharmacies
+  FOR SELECT USING (user_id = auth.uid());
+
+-- Create policies for products table
+CREATE POLICY "Users can only access products from their pharmacy" ON products
+  FOR ALL USING (
+    pharmacy_id IN (
+      SELECT pharmacy_id 
+      FROM user_pharmacies 
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Create policies for sales table
+CREATE POLICY "Users can only access sales from their pharmacy" ON sales
+  FOR ALL USING (
+    pharmacy_id IN (
+      SELECT pharmacy_id 
+      FROM user_pharmacies 
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 ```
 
 ### 5. Configure Your Supabase Credentials
@@ -133,18 +144,28 @@ const supabaseUrl = 'https://YOUR_PROJECT.supabase.co';  // Replace YOUR_PROJECT
 const supabaseKey = 'YOUR_ANON_KEY';  // Replace with your actual anon key
 ```
 
-### 6. Run the Application
+### 6. Create Test Users
+
+For testing, you'll need to create users through the Supabase Auth interface:
+
+1. Go to your Supabase dashboard → Authentication → Users
+2. Click "New User" to manually create test users
+3. After creating users, link them to pharmacies using the SQL below:
+
+```sql
+-- Link users to pharmacies (replace with actual user IDs from your dashboard)
+INSERT INTO user_pharmacies (user_id, pharmacy_id, role) VALUES 
+  ('USER_ID_1', (SELECT id FROM pharmacies WHERE name = 'Sunshine Pharmacy'), 'manager'),
+  ('USER_ID_2', (SELECT id FROM pharmacies WHERE name = 'HealthPlus Drugstore'), 'staff');
+```
+
+### 7. Run the Application
 
 Open `index.html` in your web browser to start using the application.
 
 ## How to Use
 
-1. **Login**: Select your pharmacy from the dropdown, enter your username and password
-   - Sample credentials:
-     - Sunshine Pharmacy: admin/admin123
-     - HealthPlus Drugstore: staff/staff123
-     - Wellness Corner: manager/manager123
-     - CareFirst Pharmacy: user/user123
+1. **Login**: Use your Supabase Auth credentials (email and password)
 2. **Add Products**: Use the "Add New Product" form to add items to your inventory
 3. **Record Sales**: Select a product and quantity to record a sale
 4. **Manage Inventory**: Edit or delete products as needed
@@ -153,12 +174,10 @@ Open `index.html` in your web browser to start using the application.
 
 ## Security Considerations
 
-- The current implementation stores password hashes in plain text for demonstration
-- For production, implement proper password hashing and authentication
-- Consider using Supabase Auth instead of a custom users table
-- Enable Row Level Security (RLS) to enforce data isolation between pharmacies
-- The current implementation does NOT include password verification for simplicity
-- For production, implement proper password hashing and verification
+- Uses Supabase Auth for proper authentication
+- Implements Row Level Security to enforce data isolation
+- Passwords are securely hashed and managed by Supabase
+- Each user can only access data from their assigned pharmacy
 
 ## Admin Operations
 
@@ -166,7 +185,8 @@ To add new pharmacies to the system:
 1. Access your Supabase dashboard
 2. Navigate to the SQL Editor
 3. Run an INSERT command on the pharmacies table
-4. Add users for the new pharmacy in the users table
+4. Create new users in the Authentication section
+5. Link users to pharmacies using the user_pharmacies table
 
 ## Customization
 
@@ -174,12 +194,12 @@ You can easily customize the application by:
 - Adding more product categories in the HTML select element
 - Adjusting the low stock threshold (currently set to 5) in the JavaScript code
 - Modifying the CSS styles in `styles.css`
-- Enhancing the authentication system with proper password encryption
+- Extending the authentication system with additional user roles
 
 ## Support
 
 If you encounter any issues with the setup, please check:
 - That your Supabase credentials are correctly entered
-- That the database tables were created successfully with the proper relationships
-- That your browser isn't blocking certain features
-- That the pharmacies table has entries for the dropdown to work
+- That Supabase Auth is properly configured
+- That the database tables were created successfully
+- That users are properly linked to pharmacies
