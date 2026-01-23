@@ -3,186 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pharmacy Inventory Tracker</title>
+    <title>MediTrack - Pharmacy Inventory Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Welcome/Login Screen -->
     <div id="welcomeScreen" class="screen active">
         <div class="welcome-container">
-            <h1>Pharmacy Inventory Tracker</h1>
+            <div class="logo-section">
+                <i class="fas fa-pills logo-icon"></i>
+                <h1>MediTrack</h1>
+                <p>Professional Pharmacy Management Solution</p>
+            </div>
+            
             <div class="auth-form">
-                <h2>Welcome</h2>
+                <div class="form-header">
+                    <h2><i class="fas fa-lock"></i> Access Your Dashboard</h2>
+                    <p>Sign in to manage your pharmacy</p>
+                </div>
+                
                 <div class="form-group">
-                    <label for="pharmacyName">Pharmacy Name:</label>
+                    <label for="pharmacyName"><i class="fas fa-store"></i> Pharmacy Name</label>
                     <input type="text" id="pharmacyName" placeholder="Enter your pharmacy name" required>
                 </div>
+                
                 <div class="form-group">
-                    <label for="username">Username:</label>
+                    <label for="username"><i class="fas fa-user"></i> Username</label>
                     <input type="text" id="username" placeholder="Enter your username" required>
                 </div>
-                <button id="loginBtn">Access Dashboard</button>
+                
+                <button id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i> Access Dashboard
+                </button>
+                
+                <div class="form-footer">
+                    <p><small>Secure access • Multi-pharmacy support • Real-time tracking</small></p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Main App -->
     <div id="mainApp" class="screen">
-        <div class="container">
-            <header>
-                <h1 id="dashboardTitle">Pharmacy Dashboard</h1>
-                <div class="header-info">
-                    <span id="currentPharmacy">Pharmacy: <span id="pharmacyDisplay">Loading...</span></span>
-                    <button id="logoutBtn" class="logout-btn">Logout</button>
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="logo-area">
+                <i class="fas fa-pills sidebar-logo"></i>
+                <h2>MediTrack</h2>
+            </div>
+            
+            <nav class="main-nav">
+                <a href="#" id="inventoryBtn" class="nav-link active">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory</span>
+                </a>
+                <a href="#" id="salesBtn" class="nav-link">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Sales</span>
+                </a>
+                <a href="#" id="reportsBtn" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#" id="settingsBtn" class="nav-link">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user-md"></i>
                 </div>
-                <nav>
-                    <button id="inventoryBtn" class="nav-btn active">Inventory</button>
-                    <button id="salesBtn" class="nav-btn">Sales</button>
-                    <button id="reportsBtn" class="nav-btn">Reports</button>
-                </nav>
+                <div class="user-details">
+                    <span id="currentUserDisplay">User</span>
+                    <small id="currentPharmacyDisplay">Pharmacy</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="menu-toggle" id="menuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="dashboardTitle">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
             </header>
 
-            <main>
+            <main class="app-main">
                 <!-- Inventory Section -->
                 <section id="inventorySection" class="section active">
-                    <h2>Inventory Management</h2>
-                    
-                    <div class="form-container">
-                        <h3>Add New Product</h3>
-                        <form id="productForm">
-                            <input type="hidden" id="productId">
-                            <div class="form-group">
-                                <label for="productName">Product Name:</label>
-                                <input type="text" id="productName" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="productPrice">Price ($):</label>
-                                <input type="number" id="productPrice" step="0.01" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="productQuantity">Quantity:</label>
-                                <input type="number" id="productQuantity" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="productCategory">Category:</label>
-                                <select id="productCategory" required>
-                                    <option value="">Select Category</option>
-                                    <option value="Prescription">Prescription</option>
-                                    <option value="OTC">Over-the-Counter</option>
-                                    <option value="Medical Supply">Medical Supply</option>
-                                    <option value="Cosmetic">Cosmetic</option>
-                                </select>
-                            </div>
-                            <button type="submit" id="saveProductBtn">Save Product</button>
-                            <button type="button" id="cancelEditBtn" style="display:none;">Cancel</button>
-                        </form>
+                    <div class="section-header">
+                        <h2><i class="fas fa-boxes"></i> Inventory Management</h2>
+                        <div class="section-actions">
+                            <input type="text" id="searchInput" placeholder="Search products...">
+                        </div>
                     </div>
+                    
+                    <div class="content-grid">
+                        <div class="card">
+                            <h3><i class="fas fa-plus-circle"></i> Add New Product</h3>
+                            <form id="productForm">
+                                <input type="hidden" id="productId">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="productName"><i class="fas fa-tag"></i> Product Name</label>
+                                        <input type="text" id="productName" placeholder="Enter product name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="productPrice"><i class="fas fa-dollar-sign"></i> Price ($)</label>
+                                        <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="productQuantity"><i class="fas fa-sort-numeric-up"></i> Quantity</label>
+                                        <input type="number" id="productQuantity" min="0" placeholder="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="productCategory"><i class="fas fa-tags"></i> Category</label>
+                                        <select id="productCategory" required>
+                                            <option value="">Select Category</option>
+                                            <option value="Prescription">Prescription</option>
+                                            <option value="OTC">Over-the-Counter</option>
+                                            <option value="Medical Supply">Medical Supply</option>
+                                            <option value="Cosmetic">Cosmetic</option>
+                                            <option value="Vitamin">Vitamin</option>
+                                            <option value="Supplement">Supplement</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" id="saveProductBtn">
+                                        <i class="fas fa-save"></i> Save Product
+                                    </button>
+                                    <button type="button" id="cancelEditBtn" style="display:none;" class="btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
 
-                    <div class="table-container">
-                        <h3>Current Inventory</h3>
-                        <input type="text" id="searchInput" placeholder="Search products...">
-                        <table id="inventoryTable">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Price</th>
-                                    <th>Quantity</th>
-                                    <th>Category</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventoryBody">
-                                <!-- Product rows will be populated here -->
-                            </tbody>
-                        </table>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-list"></i> Current Inventory</h3>
+                                <span class="item-count" id="inventoryCount">0 items</span>
+                            </div>
+                            <div class="table-container">
+                                <table id="inventoryTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Price</th>
+                                            <th>Qty</th>
+                                            <th>Category</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inventoryBody">
+                                        <!-- Product rows will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Sales Section -->
                 <section id="salesSection" class="section">
-                    <h2>Sales Management</h2>
+                    <div class="section-header">
+                        <h2><i class="fas fa-cash-register"></i> Sales Management</h2>
+                    </div>
                     
-                    <div class="form-container">
-                        <h3>Record Sale</h3>
-                        <form id="saleForm">
-                            <div class="form-group">
-                                <label for="saleProduct">Product:</label>
-                                <select id="saleProduct" required>
-                                    <option value="">Select Product</option>
-                                    <!-- Options will be populated dynamically -->
-                                </select>
+                    <div class="content-grid">
+                        <div class="card">
+                            <h3><i class="fas fa-receipt"></i> Record New Sale</h3>
+                            <form id="saleForm">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="saleProduct"><i class="fas fa-box"></i> Product</label>
+                                        <select id="saleProduct" required>
+                                            <option value="">Select Product</option>
+                                            <!-- Options will be populated dynamically -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="saleQuantity"><i class="fas fa-sort-numeric-up"></i> Quantity Sold</label>
+                                        <input type="number" id="saleQuantity" min="1" placeholder="1" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="saleCustomer"><i class="fas fa-user"></i> Customer (Optional)</label>
+                                    <input type="text" id="saleCustomer" placeholder="Customer name">
+                                </div>
+                                
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-check-circle"></i> Record Sale
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-history"></i> Recent Sales</h3>
+                                <span class="item-count" id="salesCount">0 sales</span>
                             </div>
-                            <div class="form-group">
-                                <label for="saleQuantity">Quantity Sold:</label>
-                                <input type="number" id="saleQuantity" min="1" required>
+                            <div class="table-container">
+                                <table id="salesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Qty</th>
+                                            <th>Total</th>
+                                            <th>Date</th>
+                                            <th>Customer</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="salesBody">
+                                        <!-- Sale rows will be populated here -->
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="form-group">
-                                <label for="saleCustomer">Customer (Optional):</label>
-                                <input type="text" id="saleCustomer">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Section -->
+                <section id="reportsSection" class="section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-bar"></i> Reports & Analytics</h2>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-icon">
+                                <i class="fas fa-boxes"></i>
                             </div>
-                            <button type="submit">Record Sale</button>
-                        </form>
+                            <div class="stat-info">
+                                <h3 id="totalProducts">0</h3>
+                                <p>Total Products</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card secondary">
+                            <div class="stat-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalStock">0</h3>
+                                <p>Total Items in Stock</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <div class="stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="lowStockCount">0</h3>
+                                <p>Low Stock Items</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card success">
+                            <div class="stat-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="todaysSales">$0.00</h3>
+                                <p>Today's Sales</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="table-container">
-                        <h3>Recent Sales</h3>
-                        <table id="salesTable">
-                            <thead>
-                                <tr>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Total Price</th>
-                                <th>Date</th>
-                                <th>Customer</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salesBody">
-                            <!-- Sale rows will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Reports Section -->
-            <section id="reportsSection" class="section">
-                <h2>Reports & Analytics</h2>
-                
-                <div class="stats-container">
-                    <div class="stat-card">
-                        <h3>Total Products</h3>
-                        <p id="totalProducts">0</p>
+                    <div class="content-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Low Stock Alert</h3>
+                            </div>
+                            <div class="table-container">
+                                <table id="lowStockTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th>Category</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lowStockBody">
+                                        <!-- Low stock items will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <h3>Total Items in Stock</h3>
-                        <p id="totalStock">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Low Stock Items</h3>
-                        <p id="lowStockCount">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Today's Sales</h3>
-                        <p id="todaysSales">$0.00</p>
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <h3>Low Stock Alert</h3>
-                    <table id="lowStockTable">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Current Quantity</th>
-                                <th>Category</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lowStockBody">
-                            <!-- Low stock items will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
+                </section>
+            </main>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

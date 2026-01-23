@@ -8,9 +8,12 @@ const welcomeScreen = document.getElementById('welcomeScreen');
 const mainApp = document.getElementById('mainApp');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.querySelector('.sidebar');
 const pharmacyNameInput = document.getElementById('pharmacyName');
 const usernameInput = document.getElementById('username');
-const pharmacyDisplay = document.getElementById('pharmacyDisplay');
+const currentUserDisplay = document.getElementById('currentUserDisplay');
+const currentPharmacyDisplay = document.getElementById('currentPharmacyDisplay');
 const dashboardTitle = document.getElementById('dashboardTitle');
 const inventorySection = document.getElementById('inventorySection');
 const salesSection = document.getElementById('salesSection');
@@ -18,6 +21,7 @@ const reportsSection = document.getElementById('reportsSection');
 const inventoryBtn = document.getElementById('inventoryBtn');
 const salesBtn = document.getElementById('salesBtn');
 const reportsBtn = document.getElementById('reportsBtn');
+const settingsBtn = document.getElementById('settingsBtn');
 const productForm = document.getElementById('productForm');
 const inventoryBody = document.getElementById('inventoryBody');
 const salesBody = document.getElementById('salesBody');
@@ -30,6 +34,8 @@ const totalStockEl = document.getElementById('totalStock');
 const lowStockCountEl = document.getElementById('lowStockCount');
 const todaysSalesEl = document.getElementById('todaysSales');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
+const inventoryCount = document.getElementById('inventoryCount');
+const salesCount = document.getElementById('salesCount');
 
 // Current session data
 let currentPharmacy = null;
@@ -51,7 +57,8 @@ loginBtn.addEventListener('click', async () => {
     currentUser = username;
     
     // Update UI
-    pharmacyDisplay.textContent = currentPharmacy;
+    currentUserDisplay.textContent = currentUser;
+    currentPharmacyDisplay.textContent = currentPharmacy;
     dashboardTitle.textContent = `${currentPharmacy} Dashboard`;
     
     // Switch to main app
@@ -77,10 +84,28 @@ logoutBtn.addEventListener('click', () => {
     welcomeScreen.classList.add('active');
 });
 
+// Mobile menu toggle
+menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
+});
+
 // Navigation
-inventoryBtn.addEventListener('click', () => showSection('inventory'));
-salesBtn.addEventListener('click', () => showSection('sales'));
-reportsBtn.addEventListener('click', () => showSection('reports'));
+inventoryBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    showSection('inventory');
+});
+salesBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    showSection('sales');
+});
+reportsBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    showSection('reports');
+});
+settingsBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    alert('Settings functionality coming soon!');
+});
 
 function showSection(sectionName) {
     // Hide all sections
@@ -92,6 +117,7 @@ function showSection(sectionName) {
     inventoryBtn.classList.remove('active');
     salesBtn.classList.remove('active');
     reportsBtn.classList.remove('active');
+    settingsBtn.classList.remove('active');
     
     // Show selected section and activate button
     if (sectionName === 'inventory') {
@@ -258,22 +284,38 @@ async function loadInventory(searchTerm = '') {
     data.forEach(product => {
         const row = document.createElement('tr');
         
-        // Add low stock class if quantity is low
-        const lowStockClass = product.quantity <= 5 ? 'low-stock' : '';
+        // Determine status based on quantity
+        let statusClass = 'status-normal';
+        let statusText = 'Normal';
+        if (product.quantity <= 5) {
+            statusClass = 'status-low';
+            statusText = 'Low Stock';
+        } else if (product.quantity === 0) {
+            statusClass = 'status-out';
+            statusText = 'Out of Stock';
+        }
         
         row.innerHTML = `
             <td>${product.name}</td>
             <td>$${product.price.toFixed(2)}</td>
-            <td class="${lowStockClass}">${product.quantity}</td>
+            <td>${product.quantity}</td>
             <td>${product.category}</td>
-            <td>
-                <button class="edit-btn" onclick="editProduct(${product.id})">Edit</button>
-                <button class="delete-btn" onclick="deleteProduct(${product.id})">Delete</button>
+            <td><span class="${statusClass}">${statusText}</span></td>
+            <td class="action-buttons">
+                <button class="action-btn edit-btn" onclick="editProduct(${product.id})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </td>
         `;
         
         inventoryBody.appendChild(row);
     });
+    
+    // Update inventory count
+    inventoryCount.textContent = `${data.length} items`;
 }
 
 // Load sales data
@@ -316,6 +358,9 @@ async function loadSales() {
         `;
         salesBody.appendChild(row);
     });
+    
+    // Update sales count
+    salesCount.textContent = `${data.length} sales`;
 }
 
 // Load products for sale dropdown
@@ -418,6 +463,11 @@ async function loadReports() {
                 <td>${item.name}</td>
                 <td>${item.quantity}</td>
                 <td>${item.category}</td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="editProduct(${item.id})">
+                        <i class="fas fa-edit"></i> Restock
+                    </button>
+                </td>
             `;
             lowStockBody.appendChild(row);
         });
@@ -453,6 +503,7 @@ async function editProduct(id) {
     
     // Change button text and show cancel button
     document.getElementById('saveProductBtn').textContent = 'Update Product';
+    document.getElementById('saveProductBtn').innerHTML = '<i class="fas fa-sync-alt"></i> Update Product';
     cancelEditBtn.style.display = 'inline-block';
     
     // Scroll to form
@@ -466,7 +517,7 @@ async function deleteProduct(id) {
         return;
     }
     
-    if (confirm('Are you sure you want to delete this product?')) {
+    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
         const { error } = await supabaseClient
             .from('products')
             .delete()
@@ -491,6 +542,7 @@ function resetForm() {
     productForm.reset();
     currentEditProductId = null;
     document.getElementById('saveProductBtn').textContent = 'Save Product';
+    document.getElementById('saveProductBtn').innerHTML = '<i class="fas fa-save"></i> Save Product';
     cancelEditBtn.style.display = 'none';
 }
 
@@ -509,4 +561,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (supabaseUrl.includes('YOUR_PROJECT') || supabaseKey.includes('YOUR_ANON_KEY')) {
         alert('Please configure your Supabase credentials in script.js before using the application.');
     }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1024 && sidebar.classList.contains('active')) {
+            if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        }
+    });
 });
