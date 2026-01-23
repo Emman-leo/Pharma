@@ -10,7 +10,6 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const menuToggle = document.getElementById('menuToggle');
 const sidebar = document.querySelector('.sidebar');
-const pharmacySelect = document.getElementById('pharmacySelect');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const currentUserDisplay = document.getElementById('currentUserDisplay');
@@ -91,8 +90,11 @@ async function initializeApp(user) {
             role: userPharmacy.role
         };
 
+        // Apply role-based UI changes
+        applyRolePermissions();
+
         // Update UI
-        currentUserDisplay.textContent = currentUser.email;
+        currentUserDisplay.textContent = `${currentUser.email} (${currentUser.role})`;
         currentPharmacyDisplay.textContent = currentPharmacy.name;
         dashboardTitle.textContent = `${currentPharmacy.name} Dashboard`;
 
@@ -100,12 +102,39 @@ async function initializeApp(user) {
         welcomeScreen.classList.remove('active');
         mainApp.classList.add('active');
 
-        // Load inventory
-        await loadInventory();
+        // Load initial data based on role
+        if (currentUser.role === 'manager') {
+            await loadInventory();
+        } else {
+            // Staff default to sales section
+            showSection('sales');
+        }
     } catch (error) {
         console.error('Error initializing app:', error);
         alert('Error initializing application. Please try logging in again.');
         await supabaseClient.auth.signOut();
+    }
+}
+
+// Apply role-based permissions to UI
+function applyRolePermissions() {
+    if (currentUser.role === 'staff') {
+        // Hide inventory and reports sections for staff
+        inventorySection.style.display = 'none';
+        reportsSection.style.display = 'none';
+        
+        // Hide inventory and reports navigation buttons
+        inventoryBtn.style.display = 'none';
+        reportsBtn.style.display = 'none';
+        
+        // Update dashboard title for staff
+        dashboardTitle.textContent = `${currentPharmacy.name} - Sales Terminal`;
+    } else if (currentUser.role === 'manager') {
+        // Show all sections for managers
+        inventorySection.style.display = 'block';
+        reportsSection.style.display = 'block';
+        inventoryBtn.style.display = 'flex';
+        reportsBtn.style.display = 'flex';
     }
 }
 
@@ -177,6 +206,10 @@ menuToggle.addEventListener('click', () => {
 // Navigation
 inventoryBtn.addEventListener('click', (e) => {
     e.preventDefault();
+    if (currentUser?.role === 'staff') {
+        alert('Access denied. Only managers can access inventory management.');
+        return;
+    }
     showSection('inventory');
 });
 salesBtn.addEventListener('click', (e) => {
@@ -185,6 +218,10 @@ salesBtn.addEventListener('click', (e) => {
 });
 reportsBtn.addEventListener('click', (e) => {
     e.preventDefault();
+    if (currentUser?.role === 'staff') {
+        alert('Access denied. Only managers can access reports.');
+        return;
+    }
     showSection('reports');
 });
 settingsBtn.addEventListener('click', (e) => {
@@ -193,6 +230,16 @@ settingsBtn.addEventListener('click', (e) => {
 });
 
 function showSection(sectionName) {
+    // Check role permissions
+    if (sectionName === 'inventory' && currentUser?.role === 'staff') {
+        alert('Access denied. Only managers can access inventory management.');
+        return;
+    }
+    if (sectionName === 'reports' && currentUser?.role === 'staff') {
+        alert('Access denied. Only managers can access reports.');
+        return;
+    }
+
     // Hide all sections
     inventorySection.classList.remove('active');
     salesSection.classList.remove('active');
@@ -221,9 +268,14 @@ function showSection(sectionName) {
     }
 }
 
-// Form handling
+// Form handling - only allow if user is manager
 productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    if (currentUser?.role !== 'manager') {
+        alert('Access denied. Only managers can manage inventory.');
+        return;
+    }
     
     const name = document.getElementById('productName').value;
     const price = parseFloat(document.getElementById('productPrice').value);
@@ -332,16 +384,20 @@ saleForm.addEventListener('submit', async (e) => {
     
     alert('Sale recorded successfully!');
     saleForm.reset();
-    loadInventory();
+    loadInventory(); // Only if user is manager
     loadSales();
-    loadReports();
+    loadReports(); // Only if user is manager
 });
 
-// Load inventory data
+// Load inventory data - only for managers
 async function loadInventory(searchTerm = '') {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
         return;
+    }
+    
+    if (currentUser?.role !== 'manager') {
+        return; // Staff can't access inventory
     }
     
     let query = supabaseClient
@@ -400,7 +456,7 @@ async function loadInventory(searchTerm = '') {
     inventoryCount.textContent = `${data.length} items`;
 }
 
-// Load sales data
+// Load sales data - available to both staff and managers
 async function loadSales() {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
@@ -445,7 +501,7 @@ async function loadSales() {
     salesCount.textContent = `${data.length} sales`;
 }
 
-// Load products for sale dropdown
+// Load products for sale dropdown - available to both staff and managers
 async function loadProductsForSale() {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
@@ -475,11 +531,15 @@ async function loadProductsForSale() {
     });
 }
 
-// Load report data
+// Load report data - only for managers
 async function loadReports() {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
         return;
+    }
+    
+    if (currentUser?.role !== 'manager') {
+        return; // Staff can't access reports
     }
     
     // Load inventory stats for current pharmacy
@@ -556,10 +616,15 @@ async function loadReports() {
     }
 }
 
-// Edit product
+// Edit product - only for managers
 async function editProduct(id) {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
+        return;
+    }
+    
+    if (currentUser?.role !== 'manager') {
+        alert('Access denied. Only managers can edit products.');
         return;
     }
     
@@ -592,10 +657,15 @@ async function editProduct(id) {
     document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Delete product
+// Delete product - only for managers
 async function deleteProduct(id) {
     if (!currentPharmacy) {
         console.log('No pharmacy selected');
+        return;
+    }
+    
+    if (currentUser?.role !== 'manager') {
+        alert('Access denied. Only managers can delete products.');
         return;
     }
     
@@ -630,7 +700,9 @@ function resetForm() {
 
 // Search functionality
 searchInput.addEventListener('input', (e) => {
-    loadInventory(e.target.value);
+    if (currentUser?.role === 'manager') {
+        loadInventory(e.target.value);
+    }
 });
 
 // Initialize the app

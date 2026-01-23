@@ -1,15 +1,16 @@
 # MediTrack - Pharmacy Inventory Management System
 
-A professional web application for pharmacies to track sales and manage inventory using HTML, CSS, JavaScript, and Supabase for the backend. Features secure multi-pharmacy access with Supabase authentication.
+A professional web application for pharmacies to track sales and manage inventory using HTML, CSS, JavaScript, and Supabase for the backend. Features secure multi-pharmacy access with Supabase authentication and role-based permissions.
 
 ## Features
 
 - **Secure Multi-Pharmacy Access**: Controlled access through registered pharmacy accounts
 - **Supabase Authentication**: Proper email/password authentication
+- **Role-Based Permissions**: Manager vs Staff access controls
 - **Pharmacy Registration**: Admin-managed pharmacy registration system
-- **Inventory Management**: Add, edit, and delete products with name, price, quantity, and category
-- **Sales Tracking**: Record sales transactions and automatically update inventory
-- **Dashboard**: View statistics and low stock alerts
+- **Inventory Management**: Add, edit, and delete products with name, price, quantity, and category (Managers only)
+- **Sales Tracking**: Record sales transactions and automatically update inventory (Staff and Managers)
+- **Dashboard**: View statistics and low stock alerts (Managers only)
 - **Responsive Design**: Works on desktop and mobile devices
 
 ## Prerequisites
@@ -153,10 +154,12 @@ For testing, you'll need to create users through the Supabase Auth interface:
 3. After creating users, link them to pharmacies using the SQL below:
 
 ```sql
--- Link users to pharmacies (replace with actual user IDs from your dashboard)
+-- Link users to pharmacies with specific roles (replace with actual user IDs from your dashboard)
 INSERT INTO user_pharmacies (user_id, pharmacy_id, role) VALUES 
   ('USER_ID_1', (SELECT id FROM pharmacies WHERE name = 'Sunshine Pharmacy'), 'manager'),
-  ('USER_ID_2', (SELECT id FROM pharmacies WHERE name = 'HealthPlus Drugstore'), 'staff');
+  ('USER_ID_2', (SELECT id FROM pharmacies WHERE name = 'Sunshine Pharmacy'), 'staff'),
+  ('USER_ID_3', (SELECT id FROM pharmacies WHERE name = 'HealthPlus Drugstore'), 'manager'),
+  ('USER_ID_4', (SELECT id FROM pharmacies WHERE name = 'HealthPlus Drugstore'), 'staff');
 ```
 
 ### 7. Run the Application
@@ -166,11 +169,10 @@ Open `index.html` in your web browser to start using the application.
 ## How to Use
 
 1. **Login**: Use your Supabase Auth credentials (email and password)
-2. **Add Products**: Use the "Add New Product" form to add items to your inventory
-3. **Record Sales**: Select a product and quantity to record a sale
-4. **Manage Inventory**: Edit or delete products as needed
-5. **View Reports**: Check the Reports tab for inventory statistics and low stock alerts
-6. **Logout**: Use the logout button to securely exit
+2. **Based on your role**:
+   - **Manager**: Can access inventory management, sales recording, and reports
+   - **Staff**: Can only record sales
+3. **Logout**: Use the logout button to securely exit
 
 ## Security Considerations
 
@@ -178,6 +180,7 @@ Open `index.html` in your web browser to start using the application.
 - Implements Row Level Security to enforce data isolation
 - Passwords are securely hashed and managed by Supabase
 - Each user can only access data from their assigned pharmacy
+- Role-based access controls restrict functionality based on user role
 
 ## Admin Operations
 
@@ -186,7 +189,7 @@ To add new pharmacies to the system:
 2. Navigate to the SQL Editor
 3. Run an INSERT command on the pharmacies table
 4. Create new users in the Authentication section
-5. Link users to pharmacies using the user_pharmacies table
+5. Link users to pharmacies using the user_pharmacies table with appropriate roles
 
 ## Customization
 
@@ -202,4 +205,4 @@ If you encounter any issues with the setup, please check:
 - That your Supabase credentials are correctly entered
 - That Supabase Auth is properly configured
 - That the database tables were created successfully
-- That users are properly linked to pharmacies
+- That users are properly linked to pharmacies with appropriate roles
