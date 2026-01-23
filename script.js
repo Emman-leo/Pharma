@@ -4,6 +4,14 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // DOM Elements
+const welcomeScreen = document.getElementById('welcomeScreen');
+const mainApp = document.getElementById('mainApp');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const pharmacyNameInput = document.getElementById('pharmacyName');
+const usernameInput = document.getElementById('username');
+const pharmacyDisplay = document.getElementById('pharmacyDisplay');
+const dashboardTitle = document.getElementById('dashboardTitle');
 const inventorySection = document.getElementById('inventorySection');
 const salesSection = document.getElementById('salesSection');
 const reportsSection = document.getElementById('reportsSection');
@@ -23,8 +31,51 @@ const lowStockCountEl = document.getElementById('lowStockCount');
 const todaysSalesEl = document.getElementById('todaysSales');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
-// Current editing product ID
+// Current session data
+let currentPharmacy = null;
+let currentUser = null;
 let currentEditProductId = null;
+
+// Login event
+loginBtn.addEventListener('click', async () => {
+    const pharmacyName = pharmacyNameInput.value.trim();
+    const username = usernameInput.value.trim();
+    
+    if (!pharmacyName || !username) {
+        alert('Please enter both pharmacy name and username');
+        return;
+    }
+    
+    // Store pharmacy and user info in session
+    currentPharmacy = pharmacyName;
+    currentUser = username;
+    
+    // Update UI
+    pharmacyDisplay.textContent = currentPharmacy;
+    dashboardTitle.textContent = `${currentPharmacy} Dashboard`;
+    
+    // Switch to main app
+    welcomeScreen.classList.remove('active');
+    mainApp.classList.add('active');
+    
+    // Load inventory
+    await loadInventory();
+});
+
+// Logout event
+logoutBtn.addEventListener('click', () => {
+    // Clear session data
+    currentPharmacy = null;
+    currentUser = null;
+    
+    // Reset form
+    pharmacyNameInput.value = '';
+    usernameInput.value = '';
+    
+    // Switch back to welcome screen
+    mainApp.classList.remove('active');
+    welcomeScreen.classList.add('active');
+});
 
 // Navigation
 inventoryBtn.addEventListener('click', () => showSection('inventory'));
@@ -68,12 +119,22 @@ productForm.addEventListener('submit', async (e) => {
     const quantity = parseInt(document.getElementById('productQuantity').value);
     const category = document.getElementById('productCategory').value;
     
+    // Add pharmacy ID to the data (using pharmacy name as identifier for now)
+    const productData = {
+        name,
+        price,
+        quantity,
+        category,
+        pharmacy_id: currentPharmacy
+    };
+    
     if (currentEditProductId) {
         // Update existing product
         const { error } = await supabaseClient
             .from('products')
-            .update({ name, price, quantity, category })
-            .eq('id', currentEditProductId);
+            .update(productData)
+            .eq('id', currentEditProductId)
+            .eq('pharmacy_id', currentPharmacy); // Ensure we only update products from this pharmacy
         
         if (error) {
             console.error('Error updating product:', error);
@@ -87,7 +148,7 @@ productForm.addEventListener('submit', async (e) => {
         // Insert new product
         const { error } = await supabaseClient
             .from('products')
-            .insert([{ name, price, quantity, category }]);
+            .insert([productData]);
         
         if (error) {
             console.error('Error adding product:', error);
@@ -107,11 +168,12 @@ saleForm.addEventListener('submit', async (e) => {
     const quantitySold = parseInt(document.getElementById('saleQuantity').value);
     const customer = document.getElementById('saleCustomer').value || null;
     
-    // Get product details
+    // Get product details (ensuring it belongs to current pharmacy)
     const { data: product, error: productError } = await supabaseClient
         .from('products')
         .select('*')
         .eq('id', productId)
+        .eq('pharmacy_id', currentPharmacy)
         .single();
     
     if (productError) {
@@ -136,7 +198,8 @@ saleForm.addEventListener('submit', async (e) => {
             product_id: productId,
             quantity_sold: quantitySold,
             total_price: totalPrice,
-            customer_name: customer
+            customer_name: customer,
+            pharmacy_id: currentPharmacy
         }]);
     
     if (saleError) {
@@ -150,7 +213,8 @@ saleForm.addEventListener('submit', async (e) => {
     const { error: updateError } = await supabaseClient
         .from('products')
         .update({ quantity: newQuantity })
-        .eq('id', productId);
+        .eq('id', productId)
+        .eq('pharmacy_id', currentPharmacy);
     
     if (updateError) {
         console.error('Error updating product quantity:', updateError);
@@ -167,9 +231,15 @@ saleForm.addEventListener('submit', async (e) => {
 
 // Load inventory data
 async function loadInventory(searchTerm = '') {
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
     let query = supabaseClient
         .from('products')
         .select('*')
+        .eq('pharmacy_id', currentPharmacy)
         .order('name');
     
     if (searchTerm) {
@@ -208,6 +278,11 @@ async function loadInventory(searchTerm = '') {
 
 // Load sales data
 async function loadSales() {
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
     const { data, error } = await supabaseClient
         .from('sales')
         .select(`
@@ -218,6 +293,7 @@ async function loadSales() {
             customer_name,
             products(name)
         `)
+        .eq('pharmacy_id', currentPharmacy)
         .order('sale_date', { ascending: false })
         .limit(10); // Show last 10 sales
     
@@ -244,9 +320,15 @@ async function loadSales() {
 
 // Load products for sale dropdown
 async function loadProductsForSale() {
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
     const { data, error } = await supabaseClient
         .from('products')
         .select('id, name, quantity')
+        .eq('pharmacy_id', currentPharmacy)
         .order('name');
     
     if (error) {
@@ -268,40 +350,49 @@ async function loadProductsForSale() {
 
 // Load report data
 async function loadReports() {
-    // Load inventory stats
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
+    // Load inventory stats for current pharmacy
     const { count: totalProducts, error: countError } = await supabaseClient
         .from('products')
-        .select('*', { count: 'exact' });
+        .select('*', { count: 'exact' })
+        .eq('pharmacy_id', currentPharmacy);
     
     if (!countError) {
         totalProductsEl.textContent = totalProducts || 0;
     }
     
-    // Calculate total stock
+    // Calculate total stock for current pharmacy
     const { data: inventoryData, error: inventoryError } = await supabaseClient
         .from('products')
-        .select('quantity');
+        .select('quantity')
+        .eq('pharmacy_id', currentPharmacy);
     
     if (!inventoryError && inventoryData) {
         const totalStock = inventoryData.reduce((sum, item) => sum + item.quantity, 0);
         totalStockEl.textContent = totalStock;
     }
     
-    // Count low stock items
+    // Count low stock items for current pharmacy
     const { count: lowStockCount, error: lowStockError } = await supabaseClient
         .from('products')
         .select('*', { count: 'exact' })
+        .eq('pharmacy_id', currentPharmacy)
         .lte('quantity', 5);
     
     if (!lowStockError) {
         lowStockCountEl.textContent = lowStockCount || 0;
     }
     
-    // Calculate today's sales
+    // Calculate today's sales for current pharmacy
     const today = new Date().toISOString().split('T')[0];
     const { data: dailySales, error: salesError } = await supabaseClient
         .from('sales')
         .select('total_price')
+        .eq('pharmacy_id', currentPharmacy)
         .gte('sale_date', `${today} 00:00:00`)
         .lte('sale_date', `${today} 23:59:59`);
     
@@ -310,10 +401,11 @@ async function loadReports() {
         todaysSalesEl.textContent = `$${todaysTotal.toFixed(2)}`;
     }
     
-    // Load low stock items
+    // Load low stock items for current pharmacy
     const { data: lowStockItems, error: lowStockItemsError } = await supabaseClient
         .from('products')
         .select('*')
+        .eq('pharmacy_id', currentPharmacy)
         .lte('quantity', 5)
         .order('quantity');
     
@@ -334,10 +426,16 @@ async function loadReports() {
 
 // Edit product
 async function editProduct(id) {
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
     const { data, error } = await supabaseClient
         .from('products')
         .select('*')
         .eq('id', id)
+        .eq('pharmacy_id', currentPharmacy)
         .single();
     
     if (error) {
@@ -363,11 +461,17 @@ async function editProduct(id) {
 
 // Delete product
 async function deleteProduct(id) {
+    if (!currentPharmacy) {
+        console.log('No pharmacy selected');
+        return;
+    }
+    
     if (confirm('Are you sure you want to delete this product?')) {
         const { error } = await supabaseClient
             .from('products')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('pharmacy_id', currentPharmacy);
         
         if (error) {
             console.error('Error deleting product:', error);
@@ -397,8 +501,9 @@ searchInput.addEventListener('input', (e) => {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-    // Show inventory section by default
-    showSection('inventory');
+    // Initially show the welcome screen
+    welcomeScreen.classList.add('active');
+    mainApp.classList.remove('active');
     
     // Check if Supabase is configured properly
     if (supabaseUrl.includes('YOUR_PROJECT') || supabaseKey.includes('YOUR_ANON_KEY')) {
