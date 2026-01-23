@@ -10,8 +10,9 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const menuToggle = document.getElementById('menuToggle');
 const sidebar = document.querySelector('.sidebar');
-const pharmacyNameInput = document.getElementById('pharmacyName');
+const pharmacySelect = document.getElementById('pharmacySelect');
 const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
 const currentUserDisplay = document.getElementById('currentUserDisplay');
 const currentPharmacyDisplay = document.getElementById('currentPharmacyDisplay');
 const dashboardTitle = document.getElementById('dashboardTitle');
@@ -42,31 +43,93 @@ let currentPharmacy = null;
 let currentUser = null;
 let currentEditProductId = null;
 
+// Load pharmacies for the dropdown
+async function loadPharmacies() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('pharmacies')
+            .select('id, name')
+            .order('name');
+        
+        if (error) {
+            console.error('Error loading pharmacies:', error);
+            // If there's an error, we'll still allow manual entry for now
+            // In a real implementation, you'd want to handle this differently
+            return;
+        }
+        
+        // Clear existing options except the first one
+        pharmacySelect.innerHTML = '<option value="">Choose your pharmacy</option>';
+        
+        // Add pharmacies to the dropdown
+        if (data && data.length > 0) {
+            data.forEach(pharmacy => {
+                const option = document.createElement('option');
+                option.value = pharmacy.id;
+                option.textContent = pharmacy.name;
+                pharmacySelect.appendChild(option);
+            });
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No pharmacies available';
+            pharmacySelect.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Error in loadPharmacies:', error);
+    }
+}
+
 // Login event
 loginBtn.addEventListener('click', async () => {
-    const pharmacyName = pharmacyNameInput.value.trim();
+    const selectedPharmacyId = pharmacySelect.value;
     const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
     
-    if (!pharmacyName || !username) {
-        alert('Please enter both pharmacy name and username');
+    if (!selectedPharmacyId || !username || !password) {
+        alert('Please fill in all fields');
         return;
     }
     
-    // Store pharmacy and user info in session
-    currentPharmacy = pharmacyName;
-    currentUser = username;
-    
-    // Update UI
-    currentUserDisplay.textContent = currentUser;
-    currentPharmacyDisplay.textContent = currentPharmacy;
-    dashboardTitle.textContent = `${currentPharmacy} Dashboard`;
-    
-    // Switch to main app
-    welcomeScreen.classList.remove('active');
-    mainApp.classList.add('active');
-    
-    // Load inventory
-    await loadInventory();
+    // For now, we'll simulate authentication
+    // In a real implementation, you would verify credentials against your database
+    try {
+        // Get pharmacy details
+        const { data: pharmacy, error: pharmacyError } = await supabaseClient
+            .from('pharmacies')
+            .select('name')
+            .eq('id', selectedPharmacyId)
+            .single();
+        
+        if (pharmacyError) {
+            console.error('Error fetching pharmacy:', pharmacyError);
+            alert('Invalid pharmacy selected');
+            return;
+        }
+        
+        // For demo purposes, we'll simulate authentication
+        // In a real app, you would verify the username and password against a users table
+        currentPharmacy = {
+            id: selectedPharmacyId,
+            name: pharmacy.name
+        };
+        currentUser = username;
+        
+        // Update UI
+        currentUserDisplay.textContent = currentUser;
+        currentPharmacyDisplay.textContent = currentPharmacy.name;
+        dashboardTitle.textContent = `${currentPharmacy.name} Dashboard`;
+        
+        // Switch to main app
+        welcomeScreen.classList.remove('active');
+        mainApp.classList.add('active');
+        
+        // Load inventory
+        await loadInventory();
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Authentication failed. Please check your credentials.');
+    }
 });
 
 // Logout event
@@ -76,8 +139,9 @@ logoutBtn.addEventListener('click', () => {
     currentUser = null;
     
     // Reset form
-    pharmacyNameInput.value = '';
+    pharmacySelect.value = '';
     usernameInput.value = '';
+    passwordInput.value = '';
     
     // Switch back to welcome screen
     mainApp.classList.remove('active');
@@ -151,7 +215,7 @@ productForm.addEventListener('submit', async (e) => {
         price,
         quantity,
         category,
-        pharmacy_id: currentPharmacy
+        pharmacy_id: currentPharmacy.id
     };
     
     if (currentEditProductId) {
@@ -160,7 +224,7 @@ productForm.addEventListener('submit', async (e) => {
             .from('products')
             .update(productData)
             .eq('id', currentEditProductId)
-            .eq('pharmacy_id', currentPharmacy); // Ensure we only update products from this pharmacy
+            .eq('pharmacy_id', currentPharmacy.id); // Ensure we only update products from this pharmacy
         
         if (error) {
             console.error('Error updating product:', error);
@@ -199,7 +263,7 @@ saleForm.addEventListener('submit', async (e) => {
         .from('products')
         .select('*')
         .eq('id', productId)
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .single();
     
     if (productError) {
@@ -225,7 +289,7 @@ saleForm.addEventListener('submit', async (e) => {
             quantity_sold: quantitySold,
             total_price: totalPrice,
             customer_name: customer,
-            pharmacy_id: currentPharmacy
+            pharmacy_id: currentPharmacy.id
         }]);
     
     if (saleError) {
@@ -240,7 +304,7 @@ saleForm.addEventListener('submit', async (e) => {
         .from('products')
         .update({ quantity: newQuantity })
         .eq('id', productId)
-        .eq('pharmacy_id', currentPharmacy);
+        .eq('pharmacy_id', currentPharmacy.id);
     
     if (updateError) {
         console.error('Error updating product quantity:', updateError);
@@ -265,7 +329,7 @@ async function loadInventory(searchTerm = '') {
     let query = supabaseClient
         .from('products')
         .select('*')
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .order('name');
     
     if (searchTerm) {
@@ -335,7 +399,7 @@ async function loadSales() {
             customer_name,
             products(name)
         `)
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .order('sale_date', { ascending: false })
         .limit(10); // Show last 10 sales
     
@@ -373,7 +437,7 @@ async function loadProductsForSale() {
     const { data, error } = await supabaseClient
         .from('products')
         .select('id, name, quantity')
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .order('name');
     
     if (error) {
@@ -404,7 +468,7 @@ async function loadReports() {
     const { count: totalProducts, error: countError } = await supabaseClient
         .from('products')
         .select('*', { count: 'exact' })
-        .eq('pharmacy_id', currentPharmacy);
+        .eq('pharmacy_id', currentPharmacy.id);
     
     if (!countError) {
         totalProductsEl.textContent = totalProducts || 0;
@@ -414,7 +478,7 @@ async function loadReports() {
     const { data: inventoryData, error: inventoryError } = await supabaseClient
         .from('products')
         .select('quantity')
-        .eq('pharmacy_id', currentPharmacy);
+        .eq('pharmacy_id', currentPharmacy.id);
     
     if (!inventoryError && inventoryData) {
         const totalStock = inventoryData.reduce((sum, item) => sum + item.quantity, 0);
@@ -425,7 +489,7 @@ async function loadReports() {
     const { count: lowStockCount, error: lowStockError } = await supabaseClient
         .from('products')
         .select('*', { count: 'exact' })
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .lte('quantity', 5);
     
     if (!lowStockError) {
@@ -437,7 +501,7 @@ async function loadReports() {
     const { data: dailySales, error: salesError } = await supabaseClient
         .from('sales')
         .select('total_price')
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .gte('sale_date', `${today} 00:00:00`)
         .lte('sale_date', `${today} 23:59:59`);
     
@@ -450,7 +514,7 @@ async function loadReports() {
     const { data: lowStockItems, error: lowStockItemsError } = await supabaseClient
         .from('products')
         .select('*')
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .lte('quantity', 5)
         .order('quantity');
     
@@ -485,7 +549,7 @@ async function editProduct(id) {
         .from('products')
         .select('*')
         .eq('id', id)
-        .eq('pharmacy_id', currentPharmacy)
+        .eq('pharmacy_id', currentPharmacy.id)
         .single();
     
     if (error) {
@@ -522,7 +586,7 @@ async function deleteProduct(id) {
             .from('products')
             .delete()
             .eq('id', id)
-            .eq('pharmacy_id', currentPharmacy);
+            .eq('pharmacy_id', currentPharmacy.id);
         
         if (error) {
             console.error('Error deleting product:', error);
@@ -552,10 +616,13 @@ searchInput.addEventListener('input', (e) => {
 });
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Initially show the welcome screen
     welcomeScreen.classList.add('active');
     mainApp.classList.remove('active');
+    
+    // Load pharmacies for the dropdown
+    await loadPharmacies();
     
     // Check if Supabase is configured properly
     if (supabaseUrl.includes('YOUR_PROJECT') || supabaseKey.includes('YOUR_ANON_KEY')) {
