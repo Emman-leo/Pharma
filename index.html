@@ -93,6 +93,9 @@
                     <h1 id="dashboardTitle">Dashboard</h1>
                 </div>
                 <div class="header-right">
+                    <button class="btn btn-secondary" id="exportReportBtn" style="margin-right: 10px;">
+                        <i class="fas fa-file-export"></i> Export Report
+                    </button>
                     <button class="btn btn-secondary" id="logoutBtn">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
@@ -245,6 +248,18 @@
                 <section id="reportsSection" class="section">
                     <div class="section-header">
                         <h2><i class="fas fa-chart-bar"></i> Reports & Analytics</h2>
+                        <div class="report-controls">
+                            <select id="reportPeriod">
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month" selected>This Month</option>
+                                <option value="year">This Year</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                            <input type="date" id="startDate" style="display:none;">
+                            <input type="date" id="endDate" style="display:none;">
+                            <button class="btn btn-primary" id="applyFilterBtn">Apply Filter</button>
+                        </div>
                     </div>
                     
                     <div class="stats-grid">
@@ -289,6 +304,18 @@
                         </div>
                     </div>
 
+                    <div class="chart-grid">
+                        <div class="card">
+                            <h3><i class="fas fa-chart-line"></i> Sales Trend</h3>
+                            <canvas id="salesChart" height="300"></canvas>
+                        </div>
+                        
+                        <div class="card">
+                            <h3><i class="fas fa-chart-pie"></i> Product Categories</h3>
+                            <canvas id="categoryChart" height="300"></canvas>
+                        </div>
+                    </div>
+
                     <div class="content-grid">
                         <div class="card">
                             <div class="card-header">
@@ -310,12 +337,33 @@
                                 </table>
                             </div>
                         </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-fire"></i> Top Selling Products</h3>
+                            </div>
+                            <div class="table-container">
+                                <table id="topSellingTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Units Sold</th>
+                                            <th>Total Revenue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topSellingBody">
+                                        <!-- Top selling items will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </main>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>

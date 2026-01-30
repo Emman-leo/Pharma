@@ -8,6 +8,7 @@ const welcomeScreen = document.getElementById('welcomeScreen');
 const mainApp = document.getElementById('mainApp');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const exportReportBtn = document.getElementById('exportReportBtn');
 const menuToggle = document.getElementById('menuToggle');
 const sidebar = document.querySelector('.sidebar');
 const usernameInput = document.getElementById('username');
@@ -36,6 +37,19 @@ const todaysSalesEl = document.getElementById('todaysSales');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const inventoryCount = document.getElementById('inventoryCount');
 const salesCount = document.getElementById('salesCount');
+const reportPeriod = document.getElementById('reportPeriod');
+const startDate = document.getElementById('startDate');
+const endDate = document.getElementById('endDate');
+const applyFilterBtn = document.getElementById('applyFilterBtn');
+const topSellingBody = document.getElementById('topSellingBody');
+
+// Chart elements
+const salesChartCanvas = document.getElementById('salesChart');
+const categoryChartCanvas = document.getElementById('categoryChart');
+
+// Chart instances
+let salesChart = null;
+let categoryChart = null;
 
 // Current session data
 let currentPharmacy = null;
@@ -189,6 +203,17 @@ logoutBtn.addEventListener('click', async () => {
     }
 });
 
+// Export report functionality
+exportReportBtn.addEventListener('click', () => {
+    if (currentUser?.role !== 'manager') {
+        alert('Access denied. Only managers can export reports.');
+        return;
+    }
+    
+    // In a real application, this would generate and download a PDF/Excel file
+    alert('Export functionality would generate a comprehensive report with all the current data shown in the reports section.');
+});
+
 // Listen for auth state changes
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
@@ -197,6 +222,21 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         showLoginScreen();
     }
 });
+
+// Report period change event
+reportPeriod.addEventListener('change', function() {
+    if (this.value === 'custom') {
+        startDate.style.display = 'inline-block';
+        endDate.style.display = 'inline-block';
+    } else {
+        startDate.style.display = 'none';
+        endDate.style.display = 'none';
+    }
+    loadReports(); // Reload reports with new period
+});
+
+// Apply filter button event
+applyFilterBtn.addEventListener('click', loadReports);
 
 // Mobile menu toggle
 menuToggle.addEventListener('click', () => {
@@ -531,6 +571,62 @@ async function loadProductsForSale() {
     });
 }
 
+// Get date range based on selected period
+function getDateRange() {
+    const period = reportPeriod.value;
+    const today = new Date();
+    
+    let startDate, endDate;
+    
+    switch(period) {
+        case 'today':
+            startDate = new Date(today.setHours(0, 0, 0, 0));
+            endDate = new Date(today.setHours(23, 59, 59, 999));
+            break;
+        case 'week':
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(today);
+            endOfWeek.setDate(today.getDate() + (6 - today.getDay())); // Saturday
+            endOfWeek.setHours(23, 59, 59, 999);
+            
+            startDate = startOfWeek;
+            endDate = endOfWeek;
+            break;
+        case 'month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+            break;
+        case 'year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+            break;
+        case 'custom':
+            if (startDate.value && endDate.value) {
+                startDate = new Date(startDate.value);
+                endDate = new Date(endDate.value);
+                // Add time to end date
+                endDate.setHours(23, 59, 59, 999);
+            } else {
+                // Default to month if custom dates not set
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+            }
+            break;
+        default:
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+    
+    // Format dates for Supabase query
+    return {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+    };
+}
+
 // Load report data - only for managers
 async function loadReports() {
     if (!currentPharmacy) {
@@ -541,6 +637,8 @@ async function loadReports() {
     if (currentUser?.role !== 'manager') {
         return; // Staff can't access reports
     }
+    
+    const dateRange = getDateRange();
     
     // Load inventory stats for current pharmacy
     const { count: totalProducts, error: countError } = await supabaseClient
@@ -574,18 +672,34 @@ async function loadReports() {
         lowStockCountEl.textContent = lowStockCount || 0;
     }
     
-    // Calculate today's sales for current pharmacy
-    const today = new Date().toISOString().split('T')[0];
-    const { data: dailySales, error: salesError } = await supabaseClient
+    // Calculate sales for selected period
+    const { data: periodSales, error: salesError } = await supabaseClient
         .from('sales')
-        .select('total_price')
+        .select('total_price, sale_date')
         .eq('pharmacy_id', currentPharmacy.id)
-        .gte('sale_date', `${today} 00:00:00`)
-        .lte('sale_date', `${today} 23:59:59`);
+        .gte('sale_date', dateRange.start)
+        .lte('sale_date', dateRange.end);
     
-    if (!salesError && dailySales) {
-        const todaysTotal = dailySales.reduce((sum, sale) => sum + sale.total_price, 0);
-        todaysSalesEl.textContent = `$${todaysTotal.toFixed(2)}`;
+    if (!salesError && periodSales) {
+        const periodTotal = periodSales.reduce((sum, sale) => sum + sale.total_price, 0);
+        // Format the sales amount appropriately based on the period
+        switch(reportPeriod.value) {
+            case 'today':
+                todaysSalesEl.textContent = `$${periodTotal.toFixed(2)}`;
+                break;
+            case 'week':
+                todaysSalesEl.textContent = `$${periodTotal.toFixed(2)} (Week)`;
+                break;
+            case 'month':
+                todaysSalesEl.textContent = `$${periodTotal.toFixed(2)} (Month)`;
+                break;
+            case 'year':
+                todaysSalesEl.textContent = `$${periodTotal.toFixed(2)} (Year)`;
+                break;
+            case 'custom':
+                todaysSalesEl.textContent = `$${periodTotal.toFixed(2)} (Custom)`;
+                break;
+        }
     }
     
     // Load low stock items for current pharmacy
@@ -614,6 +728,197 @@ async function loadReports() {
             lowStockBody.appendChild(row);
         });
     }
+    
+    // Load top selling products for the period
+    await loadTopSellingProducts(dateRange);
+    
+    // Load sales trend data for the chart
+    await loadSalesTrend(dateRange);
+    
+    // Load category distribution data for the chart
+    await loadCategoryDistribution(dateRange);
+}
+
+// Load top selling products for the period
+async function loadTopSellingProducts(dateRange) {
+    // Get sales grouped by product for the period
+    const { data: salesData, error: salesError } = await supabaseClient
+        .from('sales')
+        .select(`
+            product_id,
+            SUM(quantity_sold) as total_quantity,
+            SUM(total_price) as total_revenue,
+            products(name)
+        `)
+        .eq('pharmacy_id', currentPharmacy.id)
+        .gte('sale_date', dateRange.start)
+        .lte('sale_date', dateRange.end)
+        .group('product_id, products.name')
+        .order('total_quantity', { ascending: false })
+        .limit(10);
+    
+    if (salesError) {
+        console.error('Error loading top selling products:', salesError);
+        return;
+    }
+    
+    topSellingBody.innerHTML = '';
+    
+    if (salesData && salesData.length > 0) {
+        salesData.forEach(sale => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${sale.products?.name || 'Unknown Product'}</td>
+                <td>${sale.total_quantity}</td>
+                <td>$${parseFloat(sale.total_revenue).toFixed(2)}</td>
+            `;
+            topSellingBody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="3">No sales data available for this period</td>
+        `;
+        topSellingBody.appendChild(row);
+    }
+}
+
+// Load sales trend data for the chart
+async function loadSalesTrend(dateRange) {
+    // Get daily sales for the period
+    const { data: salesData, error: salesError } = await supabaseClient
+        .from('sales')
+        .select(`
+            DATE_TRUNC('day', sale_date::timestamp) as day,
+            SUM(total_price) as daily_total
+        `)
+        .eq('pharmacy_id', currentPharmacy.id)
+        .gte('sale_date', dateRange.start)
+        .lte('sale_date', dateRange.end)
+        .group('day')
+        .order('day');
+    
+    if (salesError) {
+        console.error('Error loading sales trend:', salesError);
+        return;
+    }
+    
+    // Prepare data for the chart
+    const labels = [];
+    const data = [];
+    
+    if (salesData && salesData.length > 0) {
+        salesData.forEach(sale => {
+            // Format the date for display
+            const date = new Date(sale.day);
+            labels.push(date.toLocaleDateString());
+            data.push(parseFloat(sale.daily_total));
+        });
+    }
+    
+    // Destroy existing chart if it exists
+    if (salesChart) {
+        salesChart.destroy();
+    }
+    
+    // Create new chart
+    salesChart = new Chart(salesChartCanvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily Sales ($)',
+                data: data,
+                borderColor: '#2e7d32',
+                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// Load category distribution data for the chart
+async function loadCategoryDistribution(dateRange) {
+    // Get sales grouped by product category for the period
+    const { data: salesData, error: salesError } = await supabaseClient
+        .from('sales')
+        .select(`
+            products(category),
+            SUM(total_price) as category_total
+        `)
+        .eq('pharmacy_id', currentPharmacy.id)
+        .gte('sale_date', dateRange.start)
+        .lte('sale_date', dateRange.end)
+        .group('products.category')
+        .order('category_total', { ascending: false });
+    
+    if (salesError) {
+        console.error('Error loading category distribution:', salesError);
+        return;
+    }
+    
+    // Prepare data for the chart
+    const labels = [];
+    const data = [];
+    const backgroundColors = [
+        '#2e7d32', '#ff9800', '#2196f3', '#f44336', '#9c27b0', 
+        '#ff5722', '#795548', '#607d8b', '#4caf50', '#ffc107'
+    ];
+    
+    if (salesData && salesData.length > 0) {
+        salesData.forEach(sale => {
+            labels.push(sale.products?.category || 'Uncategorized');
+            data.push(parseFloat(sale.category_total));
+        });
+    }
+    
+    // Destroy existing chart if it exists
+    if (categoryChart) {
+        categoryChart.destroy();
+    }
+    
+    // Create new chart
+    categoryChart = new Chart(categoryChartCanvas, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors.slice(0, data.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
 }
 
 // Edit product - only for managers
