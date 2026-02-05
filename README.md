@@ -114,7 +114,7 @@ Pharma/
    - **Name**: Medicine name (required)
    - **Category**: Select from dropdown (required)
    - **Quantity**: Current stock quantity (required)
-   - **Price**: Selling price (required)
+   - **Price**: Selling price in ₵ (required)
    - **Supplier**: Supplier name (optional)
    - **Expiry Date**: Expiration date (optional)
    - **Description**: Additional details (optional)
