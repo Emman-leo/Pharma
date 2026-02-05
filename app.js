@@ -118,20 +118,22 @@ function updateCartDisplay() {
         
         const cartItemElement = document.createElement('div');
         cartItemElement.className = 'cart-item';
+        cartItemElement.setAttribute('data-cart-index', index);
+        
         cartItemElement.innerHTML = `
             <div class="cart-item-info">
                 <strong>${item.name}</strong><br>
                 <small>${item.quantity} × ${formatCurrency(item.price)} = ${formatCurrency(itemTotal)}</small>
             </div>
             <div class="cart-item-actions">
-                <button class="btn btn-sm" onclick="decreaseQuantity(${index})" style="background: var(--warning-color); color: white;">
+                <button class="btn btn-sm decrease-btn" data-index="${index}" style="background: var(--warning-color); color: white;">
                     <i class="fas fa-minus"></i>
                 </button>
-                <span style="padding: 0 0.75rem; font-weight: bold;">${item.quantity}</span>
-                <button class="btn btn-sm" onclick="increaseQuantity(${index})" style="background: var(--primary-color); color: white;">
+                <span class="quantity-display" style="padding: 0 0.75rem; font-weight: bold;">${item.quantity}</span>
+                <button class="btn btn-sm increase-btn" data-index="${index}" style="background: var(--primary-color); color: white;">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})" style="margin-left: 0.75rem;">
+                <button class="btn btn-danger btn-sm remove-btn" data-index="${index}" style="margin-left: 0.75rem;">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -140,39 +142,86 @@ function updateCartDisplay() {
         cartItemsContainer.appendChild(cartItemElement);
     });
     
+    // Add event listeners after elements are created
+    attachCartEventListeners();
+    
     cartTotalElement.textContent = formatCurrency(total);
     processSaleBtn.disabled = false;
 }
 
+function attachCartEventListeners() {
+    // Remove existing listeners to prevent duplicates
+    document.querySelectorAll('.decrease-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDecreaseClick);
+        btn.addEventListener('click', handleDecreaseClick);
+    });
+    
+    document.querySelectorAll('.increase-btn').forEach(btn => {
+        btn.removeEventListener('click', handleIncreaseClick);
+        btn.addEventListener('click', handleIncreaseClick);
+    });
+    
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.removeEventListener('click', handleRemoveClick);
+        btn.addEventListener('click', handleRemoveClick);
+    });
+}
+
+function handleDecreaseClick(event) {
+    const index = parseInt(event.currentTarget.getAttribute('data-index'));
+    decreaseQuantity(index);
+}
+
+function handleIncreaseClick(event) {
+    const index = parseInt(event.currentTarget.getAttribute('data-index'));
+    increaseQuantity(index);
+}
+
+function handleRemoveClick(event) {
+    const index = parseInt(event.currentTarget.getAttribute('data-index'));
+    removeFromCart(index);
+}
+
 function decreaseQuantity(index) {
+    console.log('Decreasing quantity for index:', index);
+    console.log('Current cart items:', cartItems);
+    
     if (cartItems[index].quantity > 1) {
         cartItems[index].quantity -= 1;
+        showSalesAlert(`${cartItems[index].name} quantity decreased to ${cartItems[index].quantity}`);
     } else {
-        // If quantity is 1, remove the item entirely
+        const itemName = cartItems[index].name;
         cartItems.splice(index, 1);
+        showSalesAlert(`${itemName} removed from cart`);
     }
+    
     updateCartDisplay();
-    showSalesAlert('Quantity updated');
 }
 
 function increaseQuantity(index) {
+    console.log('Increasing quantity for index:', index);
+    console.log('Current cart items:', cartItems);
+    
     const item = cartItems[index];
     const medicine = medicines.find(m => m.id === item.id);
     
     if (medicine && item.quantity < medicine.quantity) {
         cartItems[index].quantity += 1;
+        showSalesAlert(`${item.name} quantity increased to ${cartItems[index].quantity}`);
         updateCartDisplay();
-        showSalesAlert('Quantity updated');
     } else {
-        showSalesAlert('Cannot exceed available stock', 'error');
+        showSalesAlert(`Cannot exceed available stock of ${medicine ? medicine.quantity : 0}`, 'error');
     }
 }
 
 function removeFromCart(index) {
+    console.log('Removing item at index:', index);
+    console.log('Current cart items:', cartItems);
+    
     const itemName = cartItems[index].name;
     cartItems.splice(index, 1);
+    showSalesAlert(`${itemName} completely removed from cart`);
     updateCartDisplay();
-    showSalesAlert(`${itemName} removed from cart`);
 }
 
 // Load sales data

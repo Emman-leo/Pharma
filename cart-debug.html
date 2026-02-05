@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .test-area { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .cart-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 10px; 
+            background: #f5f5f5; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+        }
+        button { padding: 5px 10px; margin: 0 2px; cursor: pointer; }
+        .error { background: #f8d7da; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #d4edda; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Cart Functionality Debug</h1>
+        
+        <div class="test-area">
+            <h3>Test Cart Controls</h3>
+            <div id="cart-display">
+                <p>No items in cart</p>
+            </div>
+            <div id="messages"></div>
+        </div>
+        
+        <div class="test-area">
+            <h3>Add Test Items</h3>
+            <button onclick="addItem('Paracetamol', 10)">Add Paracetamol (10 stock)</button>
+            <button onclick="addItem('Vitamin C', 5)">Add Vitamin C (5 stock)</button>
+            <button onclick="resetCart()">Reset Cart</button>
+        </div>
+        
+        <div class="test-area">
+            <h3>Debug Info</h3>
+            <button onclick="showCartState()">Show Cart State</button>
+            <button onclick="testFunctions()">Test All Functions</button>
+            <pre id="debug-output"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Test cart system
+        let cartItems = [];
+        let messageId = 0;
+        
+        function showMessage(text, type = 'info') {
+            const msg = document.createElement('div');
+            msg.className = type;
+            msg.innerHTML = `${++messageId}. ${text}`;
+            document.getElementById('messages').appendChild(msg);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (msg.parentNode) {
+                    msg.remove();
+                }
+            }, 3000);
+        }
+        
+        function updateCartDisplay() {
+            const container = document.getElementById('cart-display');
+            
+            if (cartItems.length === 0) {
+                container.innerHTML = '<p>No items in cart</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            cartItems.forEach((item, index) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'cart-item';
+                itemElement.innerHTML = `
+                    <div>
+                        <strong>${item.name}</strong> - ₵${item.price}/each<br>
+                        <small>Total: ₵${(item.price * item.quantity).toFixed(2)}</small>
+                    </div>
+                    <div>
+                        <button onclick="decreaseQuantity(${index})" style="background: #ffc107;">-</button>
+                        <span style="padding: 0 10px; font-weight: bold;">${item.quantity}</span>
+                        <button onclick="increaseQuantity(${index})" style="background: #007bff; color: white;">+</button>
+                        <button onclick="removeFromCart(${index})" style="background: #dc3545; color: white;">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(itemElement);
+            });
+        }
+        
+        function addItem(name, stock) {
+            const existingItem = cartItems.find(item => item.name === name);
+            
+            if (existingItem) {
+                if (existingItem.quantity < stock) {
+                    existingItem.quantity++;
+                    showMessage(`${name} quantity increased to ${existingItem.quantity}`);
+                } else {
+                    showMessage(`Cannot exceed stock limit of ${stock}`, 'error');
+                }
+            } else {
+                cartItems.push({
+                    name: name,
+                    price: Math.floor(Math.random() * 20) + 5, // Random price 5-25
+                    quantity: 1,
+                    maxStock: stock
+                });
+                showMessage(`${name} added to cart (Qty: 1)`);
+            }
+            
+            updateCartDisplay();
+        }
+        
+        function decreaseQuantity(index) {
+            console.log('Decreasing quantity for item:', index);
+            
+            if (cartItems[index].quantity > 1) {
+                cartItems[index].quantity--;
+                showMessage(`${cartItems[index].name} quantity decreased to ${cartItems[index].quantity}`);
+            } else {
+                const itemName = cartItems[index].name;
+                cartItems.splice(index, 1);
+                showMessage(`${itemName} removed from cart`);
+            }
+            
+            updateCartDisplay();
+        }
+        
+        function increaseQuantity(index) {
+            console.log('Increasing quantity for item:', index);
+            
+            const item = cartItems[index];
+            if (item.quantity < item.maxStock) {
+                item.quantity++;
+                showMessage(`${item.name} quantity increased to ${item.quantity}`);
+                updateCartDisplay();
+            } else {
+                showMessage(`Cannot exceed stock limit of ${item.maxStock}`, 'error');
+            }
+        }
+        
+        function removeFromCart(index) {
+            console.log('Removing item:', index);
+            
+            const itemName = cartItems[index].name;
+            cartItems.splice(index, 1);
+            showMessage(`${itemName} completely removed from cart`);
+            updateCartDisplay();
+        }
+        
+        function resetCart() {
+            cartItems = [];
+            document.getElementById('messages').innerHTML = '';
+            messageId = 0;
+            updateCartDisplay();
+            showMessage('Cart reset');
+        }
+        
+        function showCartState() {
+            document.getElementById('debug-output').textContent = 
+                'Current Cart State:\n' + 
+                JSON.stringify(cartItems, null, 2);
+        }
+        
+        function testFunctions() {
+            console.log('Testing cart functions...');
+            
+            // Test adding items
+            addItem('Test Medicine', 10);
+            
+            // Test increasing quantity
+            if (cartItems.length > 0) {
+                increaseQuantity(0);
+            }
+            
+            // Test decreasing quantity
+            if (cartItems.length > 0 && cartItems[0].quantity > 1) {
+                decreaseQuantity(0);
+            }
+            
+            showCartState();
+            showMessage('Function tests completed - check console for details');
+        }
+        
+        // Initialize
+        updateCartDisplay();
+        showMessage('Debug tool ready. Start testing!');
+    </script>
+</body>
+</html>
