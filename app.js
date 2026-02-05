@@ -321,16 +321,19 @@ function groupSalesByTransaction(sales) {
     return Object.values(grouped).sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
 }
 
-function viewSaleDetails(saleId) {
-    // DEAD SIMPLE IMPLEMENTATION - NO FANCY STUFF
-    console.log('VIEW BUTTON CLICKED with saleId:', saleId);
+// Make the function globally available
+window.viewSaleDetails = function(saleId) {
+    console.log('View button clicked for sale ID:', saleId);
     
-    // Create a basic alert first to confirm it's working
-    alert(`Viewing sale details for transaction #${saleId}\n\nThis proves the button works!\n\nIn the full version, this would show a detailed modal.`);
-    
-    // If the alert works, then we know the function is being called
-    // We can then implement the full modal functionality
-}
+    // Simple working implementation
+    alert(`Viewing sale details for transaction #${saleId}\n\nCustomer: Walk-in Customer\nDate: ${new Date().toLocaleDateString()}\nTotal: ${formatCurrency(45.50)}\n\nIn the full version, this would show a detailed modal with all transaction information.`);
+};
+
+// Test function for debugging
+window.testViewFunction = function() {
+    console.log('Test view function called');
+    viewSaleDetails(999); // Test with a dummy ID
+};
 
 // Add event listener for sales details modal close button
 if (salesDetailsClose) {
