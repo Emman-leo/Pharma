@@ -153,8 +153,8 @@ async function addMedicine(event) {
         quantity: parseInt(document.getElementById('quantity').value),
         price: parseFloat(document.getElementById('price').value),
         supplier: document.getElementById('supplier').value,
-        expiry_date: document.getElementById('expiry-date').value,
-        description: document.getElementById('description').value
+        expiry_date: document.getElementById('expiry-date').value
+        // Removed description field since it doesn't exist in the database schema
     };
     
     console.log('Medicine data:', medicineData);
@@ -217,7 +217,6 @@ async function editMedicine(id) {
     document.getElementById('edit-price').value = medicine.price;
     document.getElementById('edit-supplier').value = medicine.supplier || '';
     document.getElementById('edit-expiry').value = medicine.expiry_date || '';
-    document.getElementById('edit-description').value = medicine.description || '';
     
     console.log('Form populated with:', {
         id: medicine.id,
@@ -241,8 +240,8 @@ async function updateMedicine(event) {
         quantity: parseInt(document.getElementById('edit-quantity').value),
         price: parseFloat(document.getElementById('edit-price').value),
         supplier: document.getElementById('edit-supplier').value,
-        expiry_date: document.getElementById('edit-expiry').value,
-        description: document.getElementById('edit-description').value
+        expiry_date: document.getElementById('edit-expiry').value
+        // Removed description field since it doesn't exist in database
     };
     
     const { error } = await supabase

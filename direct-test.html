@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Database Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Direct Database Test</h1>
+        <div id="status"></div>
+        <div id="results"></div>
+        
+        <div class="test-item">
+            <h3>Test 1: Basic Connection</h3>
+            <button onclick="testConnection()">Test Database Connection</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Test 2: Simple Insert</h3>
+            <button onclick="testSimpleInsert()">Insert Minimal Data</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Test 3: Full Insert</h3>
+            <button onclick="testFullInsert()">Insert All Fields</button>
+        </div>
+        
+        <div class="test-item">
+            <h3>Test 4: Check Existing Data</h3>
+            <button onclick="checkExistingData()">View Current Inventory</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabase.js';
+        
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function showResult(title, content, type = 'info') {
+            resultsDiv.innerHTML += `
+                <div class="result">
+                    <h3>${title}</h3>
+                    <pre class="${type}">${JSON.stringify(content, null, 2)}</pre>
+                </div>
+            `;
+        }
+        
+        async function testConnection() {
+            showStatus('Testing basic database connection...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                
+                showStatus('✅ Database connection successful!', 'success');
+                showResult('Connection Test', { 
+                    status: 'Connected',
+                    message: 'Can access inventory table'
+                }, 'success');
+                
+            } catch (error) {
+                showStatus('❌ Connection failed: ' + error.message, 'error');
+                showResult('Connection Error', error, 'error');
+            }
+        }
+        
+        async function testSimpleInsert() {
+            showStatus('Testing minimal insert...', 'info');
+            
+            // Minimal required data
+            const minimalData = {
+                name: 'Test Medicine',
+                category: 'Prescription Medications',
+                quantity: 5,
+                price: 10.50
+            };
+            
+            try {
+                showResult('Attempting to insert:', minimalData, 'info');
+                
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .insert([minimalData])
+                    .select();
+                
+                if (error) throw error;
+                
+                showStatus('✅ Simple insert successful!', 'success');
+                showResult('Inserted Item', data[0], 'success');
+                
+                // Clean up
+                if (data[0] && data[0].id) {
+                    await supabase.from('inventory').delete().eq('id', data[0].id);
+                    showResult('Cleanup', 'Test item removed successfully', 'success');
+                }
+                
+            } catch (error) {
+                showStatus('❌ Simple insert failed: ' + error.message, 'error');
+                showResult('Insert Error Details', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details || 'No additional details'
+                }, 'error');
+            }
+        }
+        
+        async function testFullInsert() {
+            showStatus('Testing full insert with all fields...', 'info');
+            
+            // All possible fields
+            const fullData = {
+                name: 'Complete Test Medicine',
+                category: 'Prescription Medications',
+                quantity: 15,
+                price: 25.99,
+                supplier: 'Test Supplier',
+                expiry_date: '2025-12-31',
+                description: 'This is a test medicine for database verification'
+            };
+            
+            try {
+                showResult('Attempting full insert:', fullData, 'info');
+                
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .insert([fullData])
+                    .select();
+                
+                if (error) throw error;
+                
+                showStatus('✅ Full insert successful!', 'success');
+                showResult('Full Inserted Item', data[0], 'success');
+                
+                // Clean up
+                if (data[0] && data[0].id) {
+                    await supabase.from('inventory').delete().eq('id', data[0].id);
+                    showResult('Cleanup', 'Full test item removed', 'success');
+                }
+                
+            } catch (error) {
+                showStatus('❌ Full insert failed: ' + error.message, 'error');
+                showResult('Full Insert Error', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details || 'No additional details'
+                }, 'error');
+                
+                // Try to identify which field caused the issue
+                showResult('Diagnostic', 'Testing individual fields next...', 'info');
+                
+                // Test each field individually
+                const fields = ['name', 'category', 'quantity', 'price', 'supplier', 'expiry_date', 'description'];
+                for (const field of fields) {
+                    const testData = { [field]: fullData[field] };
+                    if (field === 'name' || field === 'category' || field === 'quantity' || field === 'price') {
+                        // Add required fields
+                        testData.name = 'Test';
+                        testData.category = 'Prescription Medications';
+                        testData.quantity = 1;
+                        testData.price = 1.00;
+                    }
+                    
+                    try {
+                        const { error: fieldError } = await supabase
+                            .from('inventory')
+                            .insert([testData])
+                            .select();
+                        
+                        if (fieldError) {
+                            showResult(`Field '${field}' test`, `❌ Failed: ${fieldError.message}`, 'error');
+                        } else {
+                            showResult(`Field '${field}' test`, '✅ Success', 'success');
+                            // Clean up successful test
+                            await supabase.from('inventory').delete().eq('name', testData.name);
+                        }
+                    } catch (fieldError) {
+                        showResult(`Field '${field}' test`, `❌ Error: ${fieldError.message}`, 'error');
+                    }
+                }
+            }
+        }
+        
+        async function checkExistingData() {
+            showStatus('Fetching current inventory data...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select('*')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    showStatus(`✅ Found ${data.length} items in inventory`, 'success');
+                    showResult('Current Inventory', data, 'success');
+                } else {
+                    showStatus('ℹ️ Inventory is currently empty', 'info');
+                    showResult('Inventory Status', 'No items found', 'info');
+                }
+                
+            } catch (error) {
+                showStatus('❌ Failed to fetch data: ' + error.message, 'error');
+                showResult('Data Fetch Error', error, 'error');
+            }
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            showStatus('Ready to test database operations', 'info');
+        });
+    </script>
+</body>
+</html>
