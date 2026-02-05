@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy App - Test Connection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Pharmacy App - Connection Test</h1>
+        
+        <div id="status"></div>
+        
+        <div class="actions">
+            <button onclick="testConnection()">Test Database Connection</button>
+            <button onclick="testAuth()">Test Authentication</button>
+            <button onclick="testTables()">Check Database Tables</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabase.js';
+        
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function showResult(title, content, type = 'info') {
+            resultsDiv.innerHTML += `
+                <div class="result">
+                    <h3>${title}</h3>
+                    <pre class="${type}">${JSON.stringify(content, null, 2)}</pre>
+                </div>
+            `;
+        }
+        
+        async function testConnection() {
+            showStatus('Testing connection...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                
+                showStatus('✅ Database connection successful!', 'success');
+                showResult('Connection Test', { 
+                    status: 'Connected', 
+                    message: 'Supabase is working properly' 
+                }, 'success');
+                
+            } catch (error) {
+                showStatus('❌ Connection failed', 'error');
+                showResult('Connection Error', error, 'error');
+            }
+        }
+        
+        async function testAuth() {
+            showStatus('Testing authentication...', 'info');
+            
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (user) {
+                    showStatus('✅ Authentication working - User logged in', 'success');
+                    showResult('Auth Status', { 
+                        authenticated: true,
+                        user: user.email 
+                    }, 'success');
+                } else {
+                    showStatus('⚠️ Not authenticated - Redirecting to login', 'info');
+                    showResult('Auth Status', { 
+                        authenticated: false,
+                        message: 'No user session found' 
+                    }, 'info');
+                    setTimeout(() => {
+                        window.location.href = 'auth.html';
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                showStatus('❌ Authentication test failed', 'error');
+                showResult('Auth Error', error, 'error');
+            }
+        }
+        
+        async function testTables() {
+            showStatus('Checking database tables...', 'info');
+            
+            const tables = ['inventory', 'categories', 'suppliers', 'sales'];
+            
+            for (const table of tables) {
+                try {
+                    const { data, error } = await supabase
+                        .from(table)
+                        .select('*', { count: 'exact' })
+                        .limit(1);
+                    
+                    if (error) {
+                        showResult(`Table: ${table}`, { 
+                            status: 'Error', 
+                            error: error.message 
+                        }, 'error');
+                    } else {
+                        const { count } = await supabase
+                            .from(table)
+                            .select('*', { count: 'exact', head: true });
+                        
+                        showResult(`Table: ${table}`, { 
+                            status: 'Available', 
+                            recordCount: count 
+                        }, 'success');
+                    }
+                } catch (error) {
+                    showResult(`Table: ${table}`, { 
+                        status: 'Error', 
+                        error: error.message 
+                    }, 'error');
+                }
+            }
+            
+            showStatus('✅ Table check completed', 'success');
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+            statusDiv.innerHTML = '';
+        }
+        
+        // Run initial connection test
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+</html>

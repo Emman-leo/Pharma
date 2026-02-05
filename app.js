@@ -66,7 +66,7 @@ function isLowStock(quantity) {
 // Get medicines from database
 async function getMedicines() {
     const { data, error } = await supabase
-        .from('medicines')
+        .from('inventory')
         .select('*')
         .order('name', { ascending: true });
 
@@ -162,7 +162,7 @@ async function addMedicine(event) {
     }
     
     const { error } = await supabase
-        .from('medicines')
+        .from('inventory')
         .insert([medicineData]);
     
     if (error) {
@@ -210,7 +210,7 @@ async function updateMedicine(event) {
     };
     
     const { error } = await supabase
-        .from('medicines')
+        .from('inventory')
         .update(medicineData)
         .eq('id', id);
     
@@ -231,7 +231,7 @@ async function deleteMedicine(id, name) {
     }
     
     const { error } = await supabase
-        .from('medicines')
+        .from('inventory')
         .delete()
         .eq('id', id);
     
