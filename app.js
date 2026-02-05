@@ -342,20 +342,25 @@ if (processSaleBtn) {
                 }
             }
             
-            // Add sale record to database
-            const saleData = {
-                customer_name: customerName,
-                total_amount: totalAmount,
-                items: JSON.stringify(cartItems),
-                sale_date: new Date().toISOString()
-            };
-            
-            const { error: saleError } = await supabase
-                .from('sales')
-                .insert([saleData]);
-            
-            if (saleError) {
-                throw saleError;
+            // Add individual sale records to database
+            for (const item of cartItems) {
+                const saleData = {
+                    product_id: item.id,
+                    product_name: item.name,
+                    quantity_sold: item.quantity,
+                    unit_price: item.price,
+                    total_amount: item.price * item.quantity,
+                    customer_name: customerName,
+                    sale_date: new Date().toISOString()
+                };
+                
+                const { error: saleError } = await supabase
+                    .from('sales')
+                    .insert([saleData]);
+                
+                if (saleError) {
+                    throw saleError;
+                }
             }
             
             showSalesAlert(`Sale processed successfully! Total: ${formatCurrency(totalAmount)}`, 'success');

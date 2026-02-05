@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS sales (
   quantity_sold INTEGER NOT NULL,
   unit_price DECIMAL(10,2) NOT NULL,
   total_amount DECIMAL(10,2) NOT NULL,
-  sale_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  sale_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  customer_name VARCHAR(255) DEFAULT 'Walk-in Customer'
 );
 
 -- Create suppliers table
