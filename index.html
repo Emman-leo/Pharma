@@ -7,9 +7,32 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Pharmacy Management System</h1>
+    <div class="container">
+        <h1>Pharmacy Management System</h1>
 
-    <script src="app.js"></script>
-    <script src="supabase.js"></script>
+        <h2>Add New Medicine</h2>
+        <form id="add-medicine-form">
+            <input type="text" id="name" placeholder="Medicine Name" required>
+            <input type="number" id="quantity" placeholder="Quantity" required>
+            <input type="number" id="price" placeholder="Price" step="0.01" required>
+            <button type="submit">Add Medicine</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Medicine data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <script type="module" src="supabase.js"></script>
 </body>
 </html>
