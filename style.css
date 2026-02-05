@@ -410,10 +410,7 @@ tr:hover td {
     transition: var(--transition);
 }
 
-.login-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
-}
+
 
 .login-header {
     text-align: center;
