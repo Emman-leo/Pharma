@@ -358,28 +358,53 @@ async function loadReportsData() {
     try {
         // Get today's sales
         const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        
         const { data: todaySales, error: todayError } = await supabase
             .from('sales')
             .select('total_amount')
             .gte('sale_date', `${today}T00:00:00`)
             .lte('sale_date', `${today}T23:59:59`);
         
+        const { data: yesterdaySales, error: yesterdayError } = await supabase
+            .from('sales')
+            .select('total_amount')
+            .gte('sale_date', `${yesterday}T00:00:00`)
+            .lte('sale_date', `${yesterday}T23:59:59`);
+        
         let todayTotal = 0;
+        let yesterdayTotal = 0;
         if (todaySales) {
             todayTotal = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        }
+        if (yesterdaySales) {
+            yesterdayTotal = yesterdaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
         }
         
         // Get this month's sales
         const year = new Date().getFullYear();
         const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        const lastMonth = new Date(year, new Date().getMonth() - 1, 1);
+        const lastMonthYear = lastMonth.getFullYear();
+        const lastMonthNum = String(lastMonth.getMonth() + 1).padStart(2, '0');
+        
         const { data: monthSales, error: monthError } = await supabase
             .from('sales')
             .select('total_amount')
             .ilike('sale_date', `${year}-${month}%`);
         
+        const { data: lastMonthSales, error: lastMonthError } = await supabase
+            .from('sales')
+            .select('total_amount')
+            .ilike('sale_date', `${lastMonthYear}-${lastMonthNum}%`);
+        
         let monthTotal = 0;
+        let lastMonthTotal = 0;
         if (monthSales) {
             monthTotal = monthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        }
+        if (lastMonthSales) {
+            lastMonthTotal = lastMonthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
         }
         
         // Get best selling product
@@ -391,19 +416,85 @@ async function loadReportsData() {
             .limit(1);
         
         const bestSelling = bestSellingData && bestSellingData.length > 0 
-            ? `${bestSellingData[0].product_name} (${bestSellingData[0].total_sold} sold)`
-            : '-';
+            ? bestSellingData[0].product_name
+            : 'No sales yet';
+        
+        const bestSellingUnits = bestSellingData && bestSellingData.length > 0 
+            ? bestSellingData[0].total_sold
+            : 0;
+        
+        // Get active products count
+        const { data: inventoryData, error: inventoryError } = await supabase
+            .from('inventory')
+            .select('quantity')
+            .gt('quantity', 0);
+        
+        const activeProducts = inventoryData ? inventoryData.length : 0;
         
         // Update dashboard stats
         document.getElementById('today-sales').textContent = formatCurrency(todayTotal);
         document.getElementById('month-sales').textContent = formatCurrency(monthTotal);
         document.getElementById('best-selling').textContent = bestSelling;
+        document.getElementById('best-selling-units').textContent = `${bestSellingUnits} units sold`;
+        document.getElementById('active-products').textContent = activeProducts;
+        
+        // Update trends
+        const todayTrend = document.getElementById('today-trend');
+        const monthTrend = document.getElementById('month-trend');
+        
+        if (todayTotal >= yesterdayTotal) {
+            todayTrend.innerHTML = `<i class="fas fa-arrow-up"></i> +${formatCurrency(todayTotal - yesterdayTotal)} vs yesterday`;
+            todayTrend.className = 'stat-trend';
+        } else {
+            todayTrend.innerHTML = `<i class="fas fa-arrow-down"></i> -${formatCurrency(yesterdayTotal - todayTotal)} vs yesterday`;
+            todayTrend.className = 'stat-trend down';
+        }
+        
+        if (monthTotal >= lastMonthTotal) {
+            monthTrend.innerHTML = `<i class="fas fa-arrow-up"></i> +${formatCurrency(monthTotal - lastMonthTotal)} vs last month`;
+            monthTrend.className = 'stat-trend';
+        } else {
+            monthTrend.innerHTML = `<i class="fas fa-arrow-down"></i> -${formatCurrency(lastMonthTotal - monthTotal)} vs last month`;
+            monthTrend.className = 'stat-trend down';
+        }
+        
+        // Render charts
+        renderCharts();
         
     } catch (error) {
         console.error('Error loading reports:', error);
         document.getElementById('today-sales').textContent = '₵0.00';
         document.getElementById('month-sales').textContent = '₵0.00';
         document.getElementById('best-selling').textContent = '-';
+        document.getElementById('best-selling-units').textContent = '0 units sold';
+        document.getElementById('active-products').textContent = '0';
+    }
+}
+
+// Render charts (placeholder implementation)
+function renderCharts() {
+    // Sales trend chart placeholder
+    const salesChart = document.getElementById('sales-trend-chart');
+    if (salesChart) {
+        salesChart.parentElement.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                <p>Sales trend visualization will appear here</p>
+                <small>Data-driven charts coming soon</small>
+            </div>
+        `;
+    }
+    
+    // Category distribution chart placeholder
+    const categoryChart = document.getElementById('category-distribution-chart');
+    if (categoryChart) {
+        categoryChart.parentElement.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                <p>Category distribution will appear here</p>
+                <small>Pie chart visualization coming soon</small>
+            </div>
+        `;
     }
 }
 
@@ -420,6 +511,40 @@ function formatDate(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString();
+}
+
+// Format date and time
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return 'N/A';
+    const date = new Date(dateTimeString);
+    return date.toLocaleString();
+}
+
+// Get date range for different periods
+function getDateRange(period) {
+    const now = new Date();
+    let startDate, endDate = now.toISOString().split('T')[0];
+    
+    switch (period) {
+        case 'today':
+            startDate = endDate;
+            break;
+        case 'week':
+            startDate = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+            break;
+        case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            break;
+        case 'quarter':
+            const quarterStart = Math.floor(now.getMonth() / 3) * 3;
+            startDate = new Date(now.getFullYear(), quarterStart, 1).toISOString().split('T')[0];
+            break;
+        case 'year':
+            startDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+            break;
+    }
+    
+    return { startDate, endDate };
 }
 
 // Event Listeners for Sales
@@ -918,6 +1043,366 @@ window.addEventListener('click', (event) => {
 async function init() {
     await refreshMedicines();
 }
+
+// Report Event Listeners
+const reportPeriodSelect = document.getElementById('report-period');
+const customDateRange = document.getElementById('custom-date-range');
+const generateReportBtn = document.getElementById('generate-report');
+const exportReportBtn = document.getElementById('export-report');
+const printReportBtn = document.getElementById('print-report');
+
+if (reportPeriodSelect) {
+    reportPeriodSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customDateRange.style.display = 'grid';
+        } else {
+            customDateRange.style.display = 'none';
+        }
+    });
+}
+
+if (generateReportBtn) {
+    generateReportBtn.addEventListener('click', generateDetailedReport);
+}
+
+if (exportReportBtn) {
+    exportReportBtn.addEventListener('click', exportReportToCSV);
+}
+
+if (printReportBtn) {
+    printReportBtn.addEventListener('click', printReport);
+}
+
+// Quick report cards
+const quickReportCards = document.querySelectorAll('.quick-report-card');
+quickReportCards.forEach(card => {
+    card.addEventListener('click', function() {
+        const reportType = this.dataset.report;
+        generateQuickReport(reportType);
+    });
+});
+
+// Generate detailed report
+async function generateDetailedReport() {
+    const reportType = document.getElementById('report-type').value;
+    const period = document.getElementById('report-period').value;
+    
+    let startDate, endDate;
+    
+    if (period === 'custom') {
+        startDate = document.getElementById('start-date').value;
+        endDate = document.getElementById('end-date').value;
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+    } else {
+        const now = new Date();
+        endDate = now.toISOString().split('T')[0];
+        
+        switch (period) {
+            case 'today':
+                startDate = endDate;
+                break;
+            case 'week':
+                startDate = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                break;
+            case 'quarter':
+                const quarterStart = Math.floor(now.getMonth() / 3) * 3;
+                startDate = new Date(now.getFullYear(), quarterStart, 1).toISOString().split('T')[0];
+                break;
+            case 'year':
+                startDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+                break;
+        }
+    }
+    
+    try {
+        let reportData = {};
+        
+        switch (reportType) {
+            case 'sales-summary':
+                const { data: salesData } = await supabase
+                    .from('sales')
+                    .select('*')
+                    .gte('sale_date', `${startDate}T00:00:00`)
+                    .lte('sale_date', `${endDate}T23:59:59`)
+                    .order('sale_date', { ascending: false });
+                reportData = salesData || [];
+                break;
+                
+            case 'inventory-status':
+                const { data: inventoryData } = await supabase
+                    .from('inventory')
+                    .select('*')
+                    .order('name');
+                reportData = inventoryData || [];
+                break;
+                
+            case 'low-stock-alert':
+                const { data: lowStockData } = await supabase
+                    .from('inventory')
+                    .select('*')
+                    .lt('quantity', 10)
+                    .order('quantity');
+                reportData = lowStockData || [];
+                break;
+        }
+        
+        displayReport(reportType, reportData, startDate, endDate);
+        
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report: ' + error.message);
+    }
+}
+
+function displayReport(type, data, startDate, endDate) {
+    const reportWindow = window.open('', '_blank', 'width=800,height=600');
+    let content = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>PharmaCare Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #2563eb; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>PharmaCare Management System</h1>
+                <h2>${getTypeDisplayName(type)} Report</h2>
+                <p>Period: ${startDate} to ${endDate}</p>
+            </div>
+    `;
+    
+    switch (type) {
+        case 'sales-summary':
+            content += `
+                <div class="summary">
+                    <h3>Summary</h3>
+                    <p>Total Transactions: ${data.length}</p>
+                    <p>Total Revenue: ${formatCurrency(data.reduce((sum, sale) => sum + sale.total_amount, 0))}</p>
+                    <p>Total Items Sold: ${data.reduce((sum, sale) => sum + sale.quantity_sold, 0)}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th>Customer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            data.forEach(sale => {
+                content += `
+                    <tr>
+                        <td>${formatDate(sale.sale_date)}</td>
+                        <td>${sale.product_name}</td>
+                        <td>${sale.quantity_sold}</td>
+                        <td>${formatCurrency(sale.unit_price)}</td>
+                        <td>${formatCurrency(sale.total_amount)}</td>
+                        <td>${sale.customer_name}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+            break;
+            
+        case 'inventory-status':
+            content += `
+                <div class="summary">
+                    <h3>Inventory Summary</h3>
+                    <p>Total Products: ${data.length}</p>
+                    <p>Low Stock Items: ${data.filter(item => item.quantity <= 10).length}</p>
+                    <p>Total Inventory Value: ${formatCurrency(data.reduce((sum, item) => sum + (item.quantity * item.price), 0))}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Supplier</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            data.forEach(item => {
+                const status = item.quantity <= 10 ? 'Low Stock' : 'In Stock';
+                const statusColor = item.quantity <= 10 ? '#ef4444' : '#10b981';
+                content += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.category || 'N/A'}</td>
+                        <td>${item.quantity}</td>
+                        <td>${formatCurrency(item.price)}</td>
+                        <td>${item.supplier || 'N/A'}</td>
+                        <td>${formatDate(item.expiry_date)}</td>
+                        <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+            break;
+            
+        case 'low-stock-alert':
+            content += `
+                <div class="summary" style="background: #fee2e2; border: 1px solid #fecaca;">
+                    <h3 style="color: #991b1b;">⚠️ Low Stock Alert</h3>
+                    <p>Items requiring immediate attention: ${data.length}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Current Stock</th>
+                            <th>Category</th>
+                            <th>Supplier</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            data.forEach(item => {
+                content += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td style="color: #ef4444; font-weight: bold;">${item.quantity}</td>
+                        <td>${item.category || 'N/A'}</td>
+                        <td>${item.supplier || 'N/A'}</td>
+                        <td>${formatCurrency(item.price)}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+            break;
+    }
+    
+    content += `
+        </body>
+        </html>
+    `;
+    
+    reportWindow.document.write(content);
+    reportWindow.document.close();
+}
+
+function getTypeDisplayName(type) {
+    const displayNames = {
+        'sales-summary': 'Sales Summary',
+        'inventory-status': 'Inventory Status',
+        'profit-analysis': 'Profit Analysis',
+        'low-stock-alert': 'Low Stock Alert',
+        'expiry-report': 'Expiry Report',
+        'customer-analysis': 'Customer Analysis'
+    };
+    return displayNames[type] || type;
+}
+
+function exportReportToCSV() {
+    alert('CSV export functionality will be implemented in the next update.');
+}
+
+function printReport() {
+    window.print();
+}
+
+function generateQuickReport(reportType) {
+    // Set the form values based on quick report selection
+    const reportTypeSelect = document.getElementById('report-type');
+    const periodSelect = document.getElementById('report-period');
+    
+    switch (reportType) {
+        case 'daily':
+            reportTypeSelect.value = 'sales-summary';
+            periodSelect.value = 'today';
+            break;
+        case 'weekly':
+            reportTypeSelect.value = 'sales-summary';
+            periodSelect.value = 'week';
+            break;
+        case 'low-stock':
+            reportTypeSelect.value = 'low-stock-alert';
+            periodSelect.value = 'today';
+            break;
+        case 'expiring':
+            reportTypeSelect.value = 'expiry-report';
+            periodSelect.value = 'month';
+            break;
+    }
+    
+    // Show notification
+    showNotification(`Generating ${reportType.replace('-', ' ')} report...`);
+    
+    // Trigger report generation
+    setTimeout(() => {
+        generateDetailedReport();
+    }, 500);
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Add notification animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 
 // Make functions available globally for inline event handlers
 window.editMedicine = editMedicine;

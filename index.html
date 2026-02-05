@@ -220,42 +220,145 @@
         <div id="reports-tab" class="tab-content">
             <div class="reports-container">
                 <h2 class="section-title"><i class="fas fa-chart-bar"></i> Reports & Analytics</h2>
+                
+                <!-- Enhanced Dashboard Stats -->
                 <div class="dashboard-stats">
                     <div class="stat-card">
                         <div class="stat-title">Today's Sales</div>
                         <div class="stat-value" id="today-sales">₵0.00</div>
+                        <div class="stat-trend" id="today-trend"><i class="fas fa-arrow-up"></i> vs yesterday</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-title">This Month</div>
                         <div class="stat-value" id="month-sales">₵0.00</div>
+                        <div class="stat-trend" id="month-trend"><i class="fas fa-arrow-up"></i> vs last month</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-title">Best Selling</div>
+                        <div class="stat-title">Best Selling Product</div>
                         <div class="stat-value" id="best-selling">-</div>
+                        <div class="stat-subtitle" id="best-selling-units">0 units sold</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Active Products</div>
+                        <div class="stat-value" id="active-products">0</div>
+                        <div class="stat-subtitle">Currently in stock</div>
                     </div>
                 </div>
-                        
+                
+                <!-- Charts Section -->
+                <div class="charts-section">
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-line"></i> Sales Trend</h3>
+                        <div class="chart-placeholder" id="sales-chart">
+                            <canvas id="sales-trend-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-pie"></i> Category Distribution</h3>
+                        <div class="chart-placeholder" id="category-chart">
+                            <canvas id="category-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reports Generation -->
                 <div class="reports-section">
                     <div class="form-container">
-                        <h3>Generate Report</h3>
+                        <h3><i class="fas fa-file-alt"></i> Generate Detailed Report</h3>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="report-type">Report Type</label>
                                 <select id="report-type">
-                                    <option value="daily">Daily Sales</option>
-                                    <option value="monthly">Monthly Summary</option>
-                                    <option value="inventory">Inventory Report</option>
-                                    <option value="profit">Profit Analysis</option>
+                                    <option value="sales-summary">Sales Summary</option>
+                                    <option value="inventory-status">Inventory Status</option>
+                                    <option value="profit-analysis">Profit Analysis</option>
+                                    <option value="low-stock-alert">Low Stock Alert</option>
+                                    <option value="expiry-report">Expiry Report</option>
+                                    <option value="customer-analysis">Customer Analysis</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="report-date">Date Range</label>
-                                <input type="date" id="report-date">
+                                <label for="report-period">Period</label>
+                                <select id="report-period">
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month" selected>This Month</option>
+                                    <option value="quarter">This Quarter</option>
+                                    <option value="year">This Year</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
                             </div>
                         </div>
-                        <button id="generate-report" class="btn btn-primary">
-                            <i class="fas fa-file-export"></i> Generate Report
-                        </button>
+                        
+                        <div class="form-row" id="custom-date-range" style="display: none;">
+                            <div class="form-group">
+                                <label for="start-date">Start Date</label>
+                                <input type="date" id="start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="end-date">End Date</label>
+                                <input type="date" id="end-date">
+                            </div>
+                        </div>
+                        
+                        <div class="report-actions">
+                            <button id="generate-report" class="btn btn-primary">
+                                <i class="fas fa-file-export"></i> Generate Report
+                            </button>
+                            <button id="export-report" class="btn btn-secondary">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                            <button id="print-report" class="btn btn-info">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Reports -->
+                <div class="quick-reports-section">
+                    <h3><i class="fas fa-bolt"></i> Quick Reports</h3>
+                    <div class="quick-report-cards">
+                        <div class="quick-report-card" data-report="daily">
+                            <div class="report-icon">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <div class="report-info">
+                                <h4>Daily Summary</h4>
+                                <p>Today's sales and transactions</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-report-card" data-report="weekly">
+                            <div class="report-icon">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                            <div class="report-info">
+                                <h4>Weekly Overview</h4>
+                                <p>7-day performance metrics</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-report-card" data-report="low-stock">
+                            <div class="report-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="report-info">
+                                <h4>Low Stock Items</h4>
+                                <p>Products needing restocking</p>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-report-card" data-report="expiring">
+                            <div class="report-icon">
+                                <i class="fas fa-hourglass-end"></i>
+                            </div>
+                            <div class="report-info">
+                                <h4>Expiring Soon</h4>
+                                <p>Products nearing expiry date</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
