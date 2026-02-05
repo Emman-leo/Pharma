@@ -5,32 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pharmacy Management System</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- Header Navigation -->
+    <header class="header">
+        <h1><i class="fas fa-pills"></i> PharmaCare Management</h1>
+        <div class="user-actions">
+            <span id="user-email"></span>
+            <button id="logout-button" class="btn btn-danger btn-sm">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </header>
+
     <div class="container">
-        <button id="logout-button">Logout</button>
-        <h1>Pharmacy Management System</h1>
+        <!-- Dashboard Statistics -->
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-title">Total Medicines</div>
+                <div class="stat-value" id="total-medicines">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Low Stock Items</div>
+                <div class="stat-value" id="low-stock" style="color: var(--warning-color);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Value</div>
+                <div class="stat-value" id="total-value">$0.00</div>
+            </div>
+        </div>
 
-        <h2>Add New Medicine</h2>
-        <form id="add-medicine-form">
-            <input type="text" id="name" placeholder="Medicine Name" required>
-            <input type="number" id="quantity" placeholder="Quantity" required>
-            <input type="number" id="price" placeholder="Price" step="0.01" required>
-            <button type="submit">Add Medicine</button>
-        </form>
+        <!-- Add Medicine Form -->
+        <div class="form-container">
+            <h2 class="form-title"><i class="fas fa-plus-circle"></i> Add New Medicine</h2>
+            <div id="alert-container"></div>
+            <form id="add-medicine-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Medicine Name *</label>
+                        <input type="text" id="name" placeholder="Enter medicine name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category">
+                            <option value="">Select Category</option>
+                            <option value="prescription">Prescription</option>
+                            <option value="otc">Over the Counter</option>
+                            <option value="supplement">Supplement</option>
+                            <option value="vaccine">Vaccine</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="quantity">Quantity *</label>
+                        <input type="number" id="quantity" placeholder="Enter quantity" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price ($) *</label>
+                        <input type="number" id="price" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="supplier">Supplier</label>
+                        <input type="text" id="supplier" placeholder="Enter supplier name">
+                    </div>
+                    <div class="form-group">
+                        <label for="expiry-date">Expiry Date</label>
+                        <input type="date" id="expiry-date">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" placeholder="Enter medicine description">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Medicine
+                </button>
+            </form>
+        </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Medicine data will be inserted here -->
-            </tbody>
-        </table>
+        <!-- Medicine Table -->
+        <div class="table-container">
+            <div class="search-bar">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="search-input"><i class="fas fa-search"></i> Search Medicines</label>
+                        <input type="text" id="search-input" placeholder="Search by name, category, or supplier...">
+                    </div>
+                    <div class="form-group">
+                        <label for="filter-category">Filter by Category</label>
+                        <select id="filter-category">
+                            <option value="">All Categories</option>
+                            <option value="prescription">Prescription</option>
+                            <option value="otc">Over the Counter</option>
+                            <option value="supplement">Supplement</option>
+                            <option value="vaccine">Vaccine</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Supplier</th>
+                        <th>Expiry Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="medicine-table-body">
+                    <!-- Medicine data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Medicine Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Medicine</h2>
+            <form id="edit-medicine-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label for="edit-name">Medicine Name *</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-category">Category</label>
+                        <select id="edit-category">
+                            <option value="prescription">Prescription</option>
+                            <option value="otc">Over the Counter</option>
+                            <option value="supplement">Supplement</option>
+                            <option value="vaccine">Vaccine</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-quantity">Quantity *</label>
+                        <input type="number" id="edit-quantity" min="0" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-price">Price ($) *</label>
+                        <input type="number" id="edit-price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-supplier">Supplier</label>
+                        <input type="text" id="edit-supplier">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-expiry">Expiry Date</label>
+                        <input type="date" id="edit-expiry">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-description">Description</label>
+                    <input type="text" id="edit-description">
+                </div>
+                <button type="submit" class="btn btn-primary">Update Medicine</button>
+            </form>
+        </div>
     </div>
 
     <script type="module" src="app.js"></script>

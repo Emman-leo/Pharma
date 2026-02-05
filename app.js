@@ -1,64 +1,276 @@
 import { supabase } from './supabase.js';
 
+// Authentication check
 const { data: { user } } = await supabase.auth.getUser();
 
 if (!user) {
     window.location.href = 'auth.html';
 }
 
-const medicineTableBody = document.querySelector('tbody');
+// DOM Elements
+const medicineTableBody = document.getElementById('medicine-table-body');
 const addMedicineForm = document.getElementById('add-medicine-form');
 const logoutButton = document.getElementById('logout-button');
+const userEmail = document.getElementById('user-email');
+const searchInput = document.getElementById('search-input');
+const filterCategory = document.getElementById('filter-category');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-medicine-form');
+const closeModal = document.querySelector('.close');
+const alertContainer = document.getElementById('alert-container');
 
+// Display user email
+if (userEmail) {
+    userEmail.textContent = user.email;
+}
+
+// Global variables
+let medicines = [];
+let filteredMedicines = [];
+
+// Show alert messages
+function showAlert(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        ${message}
+    `;
+    alertContainer.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+// Format currency
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(amount);
+}
+
+// Format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+}
+
+// Check if medicine is low stock
+function isLowStock(quantity) {
+    return quantity <= 10;
+}
+
+// Get medicines from database
 async function getMedicines() {
     const { data, error } = await supabase
         .from('medicines')
-        .select('*');
+        .select('*')
+        .order('name', { ascending: true });
 
     if (error) {
         console.error('Error fetching medicines:', error);
+        showAlert('Error loading medicines', 'error');
+        return [];
+    }
+    
+    return data || [];
+}
+
+// Display medicines in table
+function displayMedicines(medicinesToDisplay) {
+    medicineTableBody.innerHTML = '';
+    
+    if (medicinesToDisplay.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-pills" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                No medicines found
+            </td>
+        `;
+        medicineTableBody.appendChild(row);
         return;
     }
-
-    medicineTableBody.innerHTML = ''; // Clear the table
-    for (const medicine of data) {
+    
+    medicinesToDisplay.forEach(medicine => {
         const row = document.createElement('tr');
-
-        const nameCell = document.createElement('td');
-        nameCell.textContent = medicine.name;
-        row.appendChild(nameCell);
-
-        const quantityCell = document.createElement('td');
-        quantityCell.textContent = medicine.quantity;
-        row.appendChild(quantityCell);
-
-        const priceCell = document.createElement('td');
-        priceCell.textContent = medicine.price;
-        row.appendChild(priceCell);
-
+        
+        // Highlight low stock items
+        const quantityClass = isLowStock(medicine.quantity) ? 'style="color: var(--warning-color); font-weight: bold;"' : '';
+        
+        row.innerHTML = `
+            <td>${medicine.name}</td>
+            <td><span class="category-tag category-${medicine.category || 'default'}">${medicine.category || 'N/A'}</span></td>
+            <td ${quantityClass}>${medicine.quantity}</td>
+            <td>${formatCurrency(medicine.price)}</td>
+            <td>${medicine.supplier || 'N/A'}</td>
+            <td>${formatDate(medicine.expiry_date)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-warning btn-sm" onclick="editMedicine('${medicine.id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMedicine('${medicine.id}', '${medicine.name}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </td>
+        `;
+        
         medicineTableBody.appendChild(row);
-    }
+    });
 }
 
+// Update dashboard statistics
+function updateDashboardStats() {
+    const totalMedicines = medicines.length;
+    const lowStockCount = medicines.filter(med => isLowStock(med.quantity)).length;
+    const totalValue = medicines.reduce((sum, med) => sum + (med.quantity * med.price), 0);
+    
+    document.getElementById('total-medicines').textContent = totalMedicines;
+    document.getElementById('low-stock').textContent = lowStockCount;
+    document.getElementById('total-value').textContent = formatCurrency(totalValue);
+}
+
+// Add new medicine
 async function addMedicine(event) {
-    event.preventDefault(); // Prevent the form from reloading the page
-
-    const name = document.getElementById('name').value;
-    const quantity = document.getElementById('quantity').value;
-    const price = document.getElementById('price').value;
-
+    event.preventDefault();
+    
+    const formData = new FormData(addMedicineForm);
+    const medicineData = {
+        name: document.getElementById('name').value,
+        category: document.getElementById('category').value,
+        quantity: parseInt(document.getElementById('quantity').value),
+        price: parseFloat(document.getElementById('price').value),
+        supplier: document.getElementById('supplier').value,
+        expiry_date: document.getElementById('expiry-date').value,
+        description: document.getElementById('description').value
+    };
+    
+    // Validation
+    if (medicineData.quantity < 0) {
+        showAlert('Quantity cannot be negative', 'error');
+        return;
+    }
+    
+    if (medicineData.price < 0) {
+        showAlert('Price cannot be negative', 'error');
+        return;
+    }
+    
     const { error } = await supabase
         .from('medicines')
-        .insert([{ name, quantity, price }]);
-
+        .insert([medicineData]);
+    
     if (error) {
         console.error('Error adding medicine:', error);
+        showAlert('Error adding medicine: ' + error.message, 'error');
     } else {
-        addMedicineForm.reset(); // Clear the form
-        getMedicines(); // Refresh the table
+        showAlert('Medicine added successfully!');
+        addMedicineForm.reset();
+        await refreshMedicines();
     }
 }
 
+// Edit medicine
+async function editMedicine(id) {
+    const medicine = medicines.find(med => med.id === id);
+    if (!medicine) return;
+    
+    // Populate edit form
+    document.getElementById('edit-id').value = medicine.id;
+    document.getElementById('edit-name').value = medicine.name;
+    document.getElementById('edit-category').value = medicine.category || '';
+    document.getElementById('edit-quantity').value = medicine.quantity;
+    document.getElementById('edit-price').value = medicine.price;
+    document.getElementById('edit-supplier').value = medicine.supplier || '';
+    document.getElementById('edit-expiry').value = medicine.expiry_date || '';
+    document.getElementById('edit-description').value = medicine.description || '';
+    
+    // Show modal
+    editModal.style.display = 'block';
+}
+
+// Update medicine
+async function updateMedicine(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('edit-id').value;
+    const medicineData = {
+        name: document.getElementById('edit-name').value,
+        category: document.getElementById('edit-category').value,
+        quantity: parseInt(document.getElementById('edit-quantity').value),
+        price: parseFloat(document.getElementById('edit-price').value),
+        supplier: document.getElementById('edit-supplier').value,
+        expiry_date: document.getElementById('edit-expiry').value,
+        description: document.getElementById('edit-description').value
+    };
+    
+    const { error } = await supabase
+        .from('medicines')
+        .update(medicineData)
+        .eq('id', id);
+    
+    if (error) {
+        console.error('Error updating medicine:', error);
+        showAlert('Error updating medicine: ' + error.message, 'error');
+    } else {
+        showAlert('Medicine updated successfully!');
+        editModal.style.display = 'none';
+        await refreshMedicines();
+    }
+}
+
+// Delete medicine
+async function deleteMedicine(id, name) {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+        return;
+    }
+    
+    const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id);
+    
+    if (error) {
+        console.error('Error deleting medicine:', error);
+        showAlert('Error deleting medicine: ' + error.message, 'error');
+    } else {
+        showAlert('Medicine deleted successfully!');
+        await refreshMedicines();
+    }
+}
+
+// Filter medicines
+function filterMedicines() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const categoryFilter = filterCategory.value;
+    
+    filteredMedicines = medicines.filter(medicine => {
+        const matchesSearch = 
+            medicine.name.toLowerCase().includes(searchTerm) ||
+            (medicine.category && medicine.category.toLowerCase().includes(searchTerm)) ||
+            (medicine.supplier && medicine.supplier.toLowerCase().includes(searchTerm));
+        
+        const matchesCategory = !categoryFilter || medicine.category === categoryFilter;
+        
+        return matchesSearch && matchesCategory;
+    });
+    
+    displayMedicines(filteredMedicines);
+}
+
+// Refresh medicines data
+async function refreshMedicines() {
+    medicines = await getMedicines();
+    filterMedicines();
+    updateDashboardStats();
+}
+
+// Event Listeners
 logoutButton.addEventListener('click', async () => {
     await supabase.auth.signOut();
     window.location.href = 'auth.html';
@@ -66,4 +278,34 @@ logoutButton.addEventListener('click', async () => {
 
 addMedicineForm.addEventListener('submit', addMedicine);
 
-getMedicines();
+editForm.addEventListener('submit', updateMedicine);
+
+searchInput.addEventListener('input', filterMedicines);
+
+filterCategory.addEventListener('change', filterMedicines);
+
+// Close modal
+if (closeModal) {
+    closeModal.addEventListener('click', () => {
+        editModal.style.display = 'none';
+    });
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target === editModal) {
+        editModal.style.display = 'none';
+    }
+});
+
+// Initialize the application
+async function init() {
+    await refreshMedicines();
+}
+
+// Make functions available globally for inline event handlers
+window.editMedicine = editMedicine;
+window.deleteMedicine = deleteMedicine;
+
+// Start the application
+init();
