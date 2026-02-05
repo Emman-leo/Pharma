@@ -322,67 +322,14 @@ function groupSalesByTransaction(sales) {
 }
 
 function viewSaleDetails(saleId) {
-    console.log('Viewing sale details for ID:', saleId);
+    // DEAD SIMPLE IMPLEMENTATION - NO FANCY STUFF
+    console.log('VIEW BUTTON CLICKED with saleId:', saleId);
     
-    // Simple direct implementation
-    const modal = document.getElementById('sales-details-modal');
-    const content = document.getElementById('sales-details-content');
+    // Create a basic alert first to confirm it's working
+    alert(`Viewing sale details for transaction #${saleId}\n\nThis proves the button works!\n\nIn the full version, this would show a detailed modal.`);
     
-    if (!modal || !content) {
-        console.error('Modal elements not found');
-        alert('Sales details feature not properly initialized');
-        return;
-    }
-    
-    // Simple sale details content
-    content.innerHTML = `
-        <div style="padding: 20px;">
-            <h3 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
-                <i class="fas fa-receipt"></i> Sale Details #${saleId}
-            </h3>
-            
-            <div style="margin: 20px 0; background: var(--light-bg); padding: 15px; border-radius: 8px;">
-                <h4>Transaction Summary</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><strong>Customer:</strong> Walk-in Customer</div>
-                    <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
-                    <div><strong>Items:</strong> 3 items</div>
-                    <div><strong>Total:</strong> ${formatCurrency(45.50)}</div>
-                </div>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <h4>Items Purchased</h4>
-                <div style="border-top: 1px solid var(--border-color); padding-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                        <div>Paracetamol 500mg</div>
-                        <div>2 × ${formatCurrency(2.50)} = ${formatCurrency(5.00)}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                        <div>Vitamin C 1000mg</div>
-                        <div>1 × ${formatCurrency(8.99)} = ${formatCurrency(8.99)}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                        <div>Hand Sanitizer</div>
-                        <div>1 × ${formatCurrency(3.25)} = ${formatCurrency(3.25)}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-                <button class="btn btn-primary" onclick="window.print()" style="background: var(--primary-color); color: white;">
-                    <i class="fas fa-print"></i> Print Receipt
-                </button>
-                <button class="btn" onclick="document.getElementById('sales-details-modal').style.display = 'none'" style="background: var(--text-secondary); color: white;">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // Show modal
-    modal.style.display = 'block';
-    console.log('Sales details modal displayed');
+    // If the alert works, then we know the function is being called
+    // We can then implement the full modal functionality
 }
 
 // Add event listener for sales details modal close button
