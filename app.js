@@ -139,6 +139,8 @@ function updateDashboardStats() {
 async function addMedicine(event) {
     event.preventDefault();
     
+    console.log('Add medicine function called');
+    
     const formData = new FormData(addMedicineForm);
     const medicineData = {
         name: document.getElementById('name').value,
@@ -149,6 +151,8 @@ async function addMedicine(event) {
         expiry_date: document.getElementById('expiry-date').value,
         description: document.getElementById('description').value
     };
+    
+    console.log('Medicine data:', medicineData);
     
     // Validation
     if (medicineData.quantity < 0) {
@@ -161,9 +165,19 @@ async function addMedicine(event) {
         return;
     }
     
-    const { error } = await supabase
+    if (!medicineData.name || !medicineData.category) {
+        showAlert('Name and category are required', 'error');
+        return;
+    }
+    
+    console.log('Sending to Supabase...');
+    
+    const { data, error } = await supabase
         .from('inventory')
-        .insert([medicineData]);
+        .insert([medicineData])
+        .select();
+    
+    console.log('Supabase response:', { data, error });
     
     if (error) {
         console.error('Error adding medicine:', error);
@@ -177,8 +191,16 @@ async function addMedicine(event) {
 
 // Edit medicine
 async function editMedicine(id) {
+    console.log('Edit medicine called with ID:', id);
+    
     const medicine = medicines.find(med => med.id === id);
-    if (!medicine) return;
+    console.log('Found medicine:', medicine);
+    
+    if (!medicine) {
+        console.error('Medicine not found');
+        showAlert('Medicine not found', 'error');
+        return;
+    }
     
     // Populate edit form
     document.getElementById('edit-id').value = medicine.id;
@@ -190,8 +212,15 @@ async function editMedicine(id) {
     document.getElementById('edit-expiry').value = medicine.expiry_date || '';
     document.getElementById('edit-description').value = medicine.description || '';
     
+    console.log('Form populated with:', {
+        id: medicine.id,
+        name: medicine.name,
+        category: medicine.category
+    });
+    
     // Show modal
     editModal.style.display = 'block';
+    console.log('Edit modal displayed');
 }
 
 // Update medicine
