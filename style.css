@@ -388,3 +388,122 @@ tr:hover td {
     background: #f3f4f6;
     color: #4b5563;
 }
+
+/* Login Page Styles */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    padding: 1rem;
+}
+
+.login-card {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.login-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    display: block;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.login-header h1 {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.login-card .form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.login-card input {
+    width: 100%;
+    padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.login-card input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.login-card label {
+    position: relative;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.login-card label i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    width: 20px;
+}
+
+.login-card .btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Additional Modern Enhancements */
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-hover);
+}
