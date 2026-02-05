@@ -19,6 +19,19 @@ const editForm = document.getElementById('edit-medicine-form');
 const closeModal = document.querySelector('.close');
 const alertContainer = document.getElementById('alert-container');
 
+// Tab Elements
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Sales Elements
+const medicineSearch = document.getElementById('medicine-search');
+const addToCartBtn = document.getElementById('add-to-cart');
+const cartItemsContainer = document.getElementById('cart-items');
+const cartTotalElement = document.getElementById('cart-total');
+const processSaleBtn = document.getElementById('process-sale');
+const salesAlertContainer = document.getElementById('sales-alert-container');
+const salesTableBody = document.getElementById('sales-table-body');
+
 // Display user email
 if (userEmail) {
     userEmail.textContent = user.email;
@@ -27,6 +40,36 @@ if (userEmail) {
 // Global variables
 let medicines = [];
 let filteredMedicines = [];
+let cartItems = [];
+let currentSaleId = 1;
+
+// Tab Navigation
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabName = button.dataset.tab;
+        
+        // Update active tab button
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // Show corresponding content
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+            if (content.id === `${tabName}-tab`) {
+                content.classList.add('active');
+            }
+        });
+        
+        // Refresh data based on tab
+        if (tabName === 'inventory') {
+            refreshMedicines();
+        } else if (tabName === 'sales') {
+            loadSalesData();
+        } else if (tabName === 'reports') {
+            loadReportsData();
+        }
+    });
+});
 
 // Show alert messages
 function showAlert(message, type = 'success') {
@@ -43,6 +86,79 @@ function showAlert(message, type = 'success') {
     }, 3000);
 }
 
+// Sales Functions
+function showSalesAlert(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        ${message}
+    `;
+    salesAlertContainer.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+function updateCartDisplay() {
+    if (cartItems.length === 0) {
+        cartItemsContainer.innerHTML = '<p class="empty-cart">No items in cart</p>';
+        processSaleBtn.disabled = true;
+        cartTotalElement.textContent = '₵0.00';
+        return;
+    }
+    
+    let total = 0;
+    cartItemsContainer.innerHTML = '';
+    
+    cartItems.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        
+        const cartItemElement = document.createElement('div');
+        cartItemElement.className = 'cart-item';
+        cartItemElement.innerHTML = `
+            <div class="cart-item-info">
+                <strong>${item.name}</strong><br>
+                <small>${item.quantity} × ${formatCurrency(item.price)} = ${formatCurrency(itemTotal)}</small>
+            </div>
+            <div class="cart-item-actions">
+                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        cartItemsContainer.appendChild(cartItemElement);
+    });
+    
+    cartTotalElement.textContent = formatCurrency(total);
+    processSaleBtn.disabled = false;
+}
+
+function removeFromCart(index) {
+    cartItems.splice(index, 1);
+    updateCartDisplay();
+}
+
+// Load sales data
+async function loadSalesData() {
+    // This would fetch sales from database
+    console.log('Loading sales data...');
+    // For now, we'll implement the basic structure
+}
+
+// Load reports data
+async function loadReportsData() {
+    // This would load report statistics
+    console.log('Loading reports data...');
+    // Update dashboard stats
+    document.getElementById('today-sales').textContent = '₵0.00';
+    document.getElementById('month-sales').textContent = '₵0.00';
+    document.getElementById('best-selling').textContent = '-';
+}
+
 // Format currency
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-GH', {
@@ -56,6 +172,107 @@ function formatDate(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString();
+}
+
+// Event Listeners for Sales
+if (medicineSearch) {
+    medicineSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        // Filter medicines for autocomplete
+        const filtered = medicines.filter(med => 
+            med.name.toLowerCase().includes(searchTerm) ||
+            med.category.toLowerCase().includes(searchTerm)
+        );
+        // Would implement dropdown suggestions here
+    });
+}
+
+if (addToCartBtn) {
+    addToCartBtn.addEventListener('click', () => {
+        const searchTerm = medicineSearch.value.toLowerCase();
+        const medicine = medicines.find(med => 
+            med.name.toLowerCase().includes(searchTerm)
+        );
+        
+        if (!medicine) {
+            showSalesAlert('Medicine not found', 'error');
+            return;
+        }
+        
+        if (medicine.quantity <= 0) {
+            showSalesAlert('Medicine out of stock', 'error');
+            return;
+        }
+        
+        // Add to cart
+        const existingItem = cartItems.find(item => item.id === medicine.id);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cartItems.push({
+                id: medicine.id,
+                name: medicine.name,
+                price: medicine.price,
+                quantity: 1
+            });
+        }
+        
+        medicineSearch.value = '';
+        updateCartDisplay();
+        showSalesAlert(`${medicine.name} added to cart`);
+    });
+}
+
+if (processSaleBtn) {
+    processSaleBtn.addEventListener('click', async () => {
+        if (cartItems.length === 0) return;
+        
+        const customerName = document.getElementById('customer-name').value || 'Walk-in Customer';
+        let totalAmount = 0;
+        
+        // Calculate total
+        cartItems.forEach(item => {
+            totalAmount += item.price * item.quantity;
+        });
+        
+        // Process sale
+        try {
+            // Add sale record to database
+            const saleData = {
+                customer_name: customerName,
+                total_amount: totalAmount,
+                items: cartItems,
+                sale_date: new Date().toISOString()
+            };
+            
+            // Update inventory quantities
+            for (const item of cartItems) {
+                const medicine = medicines.find(m => m.id === item.id);
+                if (medicine) {
+                    const newQuantity = medicine.quantity - item.quantity;
+                    await supabase
+                        .from('inventory')
+                        .update({ quantity: newQuantity })
+                        .eq('id', item.id);
+                }
+            }
+            
+            showSalesAlert(`Sale processed successfully! Total: ${formatCurrency(totalAmount)}`, 'success');
+            
+            // Reset cart
+            cartItems = [];
+            document.getElementById('customer-name').value = '';
+            updateCartDisplay();
+            medicineSearch.value = '';
+            
+            // Refresh inventory
+            await refreshMedicines();
+            
+        } catch (error) {
+            console.error('Error processing sale:', error);
+            showSalesAlert('Error processing sale: ' + error.message, 'error');
+        }
+    });
 }
 
 // Check if medicine is low stock

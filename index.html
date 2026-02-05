@@ -19,6 +19,13 @@
         </div>
     </header>
 
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="inventory">Inventory</button>
+        <button class="tab-btn" data-tab="sales">Sales</button>
+        <button class="tab-btn" data-tab="reports">Reports</button>
+    </div>
+
     <div class="container">
         <!-- Dashboard Statistics -->
         <div class="dashboard-stats">
@@ -32,97 +39,223 @@
             </div>
             <div class="stat-card">
                 <div class="stat-title">Total Value</div>
-                <div class="stat-value" id="total-value">$0.00</div>
+                <div class="stat-value" id="total-value">₵0.00</div>
             </div>
         </div>
-
-        <!-- Add Medicine Form -->
-        <div class="form-container">
-            <h2 class="form-title"><i class="fas fa-plus-circle"></i> Add New Medicine</h2>
-            <div id="alert-container"></div>
-            <form id="add-medicine-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="name">Medicine Name *</label>
-                        <input type="text" id="name" placeholder="Enter medicine name" required>
+        
+        <!-- Inventory Tab Content -->
+        <div id="inventory-tab" class="tab-content active">
+            <!-- Add Medicine Form -->
+            <div class="form-container">
+                <h2 class="form-title"><i class="fas fa-plus-circle"></i> Add New Medicine</h2>
+                <div id="alert-container"></div>
+                <form id="add-medicine-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Medicine Name *</label>
+                            <input type="text" id="name" placeholder="Enter medicine name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" required>
+                                <option value="">Select Category</option>
+                                <option value="Prescription Medications">Prescription Medications</option>
+                                <option value="Over-the-Counter">Over-the-Counter</option>
+                                <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                                <option value="Personal Care">Personal Care</option>
+                                <option value="Medical Equipment">Medical Equipment</option>
+                                <option value="Baby Care">Baby Care</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="category">Category</label>
-                        <select id="category" required>
-                            <option value="">Select Category</option>
-                            <option value="Prescription Medications">Prescription Medications</option>
-                            <option value="Over-the-Counter">Over-the-Counter</option>
-                            <option value="Vitamins & Supplements">Vitamins & Supplements</option>
-                            <option value="Personal Care">Personal Care</option>
-                            <option value="Medical Equipment">Medical Equipment</option>
-                            <option value="Baby Care">Baby Care</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quantity">Quantity *</label>
+                            <input type="number" id="quantity" placeholder="Enter quantity" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Price (₵) *</label>
+                            <input type="number" id="price" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="supplier">Supplier</label>
+                            <input type="text" id="supplier" placeholder="Enter supplier name">
+                        </div>
+                        <div class="form-group">
+                            <label for="expiry-date">Expiry Date</label>
+                            <input type="date" id="expiry-date">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Medicine
+                    </button>
+                </form>
+            </div>
+        
+            <!-- Medicine Table -->
+            <div class="table-container">
+                <div class="search-bar">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="search-input"><i class="fas fa-search"></i> Search Medicines</label>
+                            <input type="text" id="search-input" placeholder="Search by name, category, or supplier...">
+                        </div>
+                        <div class="form-group">
+                            <label for="filter-category">Filter by Category</label>
+                            <select id="filter-category">
+                                <option value="">All Categories</option>
+                                <option value="Prescription Medications">Prescription Medications</option>
+                                <option value="Over-the-Counter">Over-the-Counter</option>
+                                <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                                <option value="Personal Care">Personal Care</option>
+                                <option value="Medical Equipment">Medical Equipment</option>
+                                <option value="Baby Care">Baby Care</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="quantity">Quantity *</label>
-                        <input type="number" id="quantity" placeholder="Enter quantity" min="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="price">Price (₵) *</label>
-                        <input type="number" id="price" placeholder="0.00" step="0.01" min="0" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="supplier">Supplier</label>
-                        <input type="text" id="supplier" placeholder="Enter supplier name">
-                    </div>
-                    <div class="form-group">
-                        <label for="expiry-date">Expiry Date</label>
-                        <input type="date" id="expiry-date">
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Medicine
-                </button>
-            </form>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Supplier</th>
+                            <th>Expiry Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="medicine-table-body">
+                        <!-- Medicine data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
-
-        <!-- Medicine Table -->
-        <div class="table-container">
-            <div class="search-bar">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="search-input"><i class="fas fa-search"></i> Search Medicines</label>
-                        <input type="text" id="search-input" placeholder="Search by name, category, or supplier...">
+        
+        <!-- Sales Tab Content -->
+        <div id="sales-tab" class="tab-content">
+            <div class="sales-container">
+                <h2 class="section-title"><i class="fas fa-cash-register"></i> Sales Management</h2>
+                        
+                <div class="sales-layout">
+                    <!-- Sales Form (Left Panel) -->
+                    <div class="sales-form-panel">
+                        <div class="form-container">
+                            <h3><i class="fas fa-shopping-cart"></i> New Sale</h3>
+                            <div id="sales-alert-container"></div>
+                                    
+                            <div class="form-group">
+                                <label for="customer-name">Customer Name (Optional)</label>
+                                <input type="text" id="customer-name" placeholder="Enter customer name">
+                            </div>
+                                    
+                            <div class="form-group">
+                                <label for="medicine-search">Add Medicine</label>
+                                <div class="search-with-button">
+                                    <input type="text" id="medicine-search" placeholder="Search medicines...">
+                                    <button type="button" id="add-to-cart" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                                    
+                            <!-- Cart Items -->
+                            <div class="cart-section">
+                                <h4>Items in Cart</h4>
+                                <div id="cart-items" class="cart-items-container">
+                                    <p class="empty-cart">No items in cart</p>
+                                </div>
+                                <div class="cart-total">
+                                    <strong>Total: <span id="cart-total">₵0.00</span></strong>
+                                </div>
+                                <button id="process-sale" class="btn btn-success" disabled>
+                                    <i class="fas fa-check-circle"></i> Process Sale
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="filter-category">Filter by Category</label>
-                        <select id="filter-category">
-                            <option value="">All Categories</option>
-                            <option value="Prescription Medications">Prescription Medications</option>
-                            <option value="Over-the-Counter">Over-the-Counter</option>
-                            <option value="Vitamins & Supplements">Vitamins & Supplements</option>
-                            <option value="Personal Care">Personal Care</option>
-                            <option value="Medical Equipment">Medical Equipment</option>
-                            <option value="Baby Care">Baby Care</option>
-                        </select>
+                            
+                    <!-- Sales History (Right Panel) -->
+                    <div class="sales-history-panel">
+                        <div class="table-container">
+                            <h3><i class="fas fa-history"></i> Recent Sales</h3>
+                            <div class="search-bar">
+                                <div class="form-group">
+                                    <label for="sales-search"><i class="fas fa-search"></i> Search Sales</label>
+                                    <input type="text" id="sales-search" placeholder="Search by customer or medicine...">
+                                </div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-table-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                            <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                            No sales recorded yet
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Supplier</th>
-                        <th>Expiry Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="medicine-table-body">
-                    <!-- Medicine data will be inserted here -->
-                </tbody>
-            </table>
+        </div>
+        
+        <!-- Reports Tab Content -->
+        <div id="reports-tab" class="tab-content">
+            <div class="reports-container">
+                <h2 class="section-title"><i class="fas fa-chart-bar"></i> Reports & Analytics</h2>
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-title">Today's Sales</div>
+                        <div class="stat-value" id="today-sales">₵0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">This Month</div>
+                        <div class="stat-value" id="month-sales">₵0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Best Selling</div>
+                        <div class="stat-value" id="best-selling">-</div>
+                    </div>
+                </div>
+                        
+                <div class="reports-section">
+                    <div class="form-container">
+                        <h3>Generate Report</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="report-type">Report Type</label>
+                                <select id="report-type">
+                                    <option value="daily">Daily Sales</option>
+                                    <option value="monthly">Monthly Summary</option>
+                                    <option value="inventory">Inventory Report</option>
+                                    <option value="profit">Profit Analysis</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="report-date">Date Range</label>
+                                <input type="date" id="report-date">
+                            </div>
+                        </div>
+                        <button id="generate-report" class="btn btn-primary">
+                            <i class="fas fa-file-export"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
