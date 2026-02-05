@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales View Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-area { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 10% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 500px; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .btn { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Sales View Debug Test</h1>
+        
+        <div class="test-area">
+            <h3>Test Sales View Functionality</h3>
+            <button onclick="testViewFunction()" class="btn">Test View Function Call</button>
+            <button onclick="showTestModal()" class="btn">Show Test Modal</button>
+            <button onclick="clearLog()" class="btn" style="background: #6c757d;">Clear Log</button>
+            <div id="log" class="log">Ready to test...</div>
+        </div>
+        
+        <div class="test-area">
+            <h3>Sales History Simulation</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="border: 1px solid #ddd; padding: 10px;">Date</th>
+                        <th style="border: 1px solid #ddd; padding: 10px;">Customer</th>
+                        <th style="border: 1px solid #ddd; padding: 10px;">Items</th>
+                        <th style="border: 1px solid #ddd; padding: 10px;">Total</th>
+                        <th style="border: 1px solid #ddd; padding: 10px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 10px;">2024-01-15</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">John Doe</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">3 items</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">₵45.50</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">
+                            <button onclick="viewSaleDetails(1001)" class="btn" style="padding: 5px 10px; font-size: 12px;">View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 10px;">2024-01-14</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">Jane Smith</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">2 items</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">₵28.75</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">
+                            <button onclick="viewSaleDetails(1002)" class="btn" style="padding: 5px 10px; font-size: 12px;">View</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div id="test-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTestModal()">&times;</span>
+            <h2>Sales Details</h2>
+            <div id="modal-content">
+                <p>Loading sale details...</p>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button onclick="closeTestModal()" class="btn" style="background: #6c757d;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let logEntries = [];
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            logEntries.push(entry);
+            document.getElementById('log').innerHTML = logEntries.join('<br>');
+            console.log(entry);
+        }
+        
+        function clearLog() {
+            logEntries = [];
+            document.getElementById('log').innerHTML = 'Log cleared...';
+        }
+        
+        function testViewFunction() {
+            log('Testing viewSaleDetails function call');
+            try {
+                viewSaleDetails(999);
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        }
+        
+        function showTestModal() {
+            log('Showing test modal');
+            document.getElementById('test-modal').style.display = 'block';
+            document.getElementById('modal-content').innerHTML = '<p>This is a test modal working correctly!</p>';
+        }
+        
+        function closeTestModal() {
+            log('Closing test modal');
+            document.getElementById('test-modal').style.display = 'none';
+        }
+        
+        // Main function that should be called
+        function viewSaleDetails(saleId) {
+            log(`viewSaleDetails called with saleId: ${saleId}`);
+            
+            try {
+                // Simulate showing sales details
+                const modal = document.getElementById('test-modal');
+                const content = document.getElementById('modal-content');
+                
+                if (!modal) {
+                    log('ERROR: Modal element not found');
+                    return;
+                }
+                
+                if (!content) {
+                    log('ERROR: Modal content element not found');
+                    return;
+                }
+                
+                log('Modal elements found, preparing content');
+                
+                // Create sale details content
+                const saleDetails = `
+                    <div style="padding: 10px;">
+                        <h3>Transaction #${saleId}</h3>
+                        <p><strong>Customer:</strong> Walk-in Customer</p>
+                        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                        <p><strong>Total:</strong> ₵45.50</p>
+                        <div style="margin-top: 15px;">
+                            <h4>Items Purchased:</h4>
+                            <ul>
+                                <li>Paracetamol 500mg - 2 × ₵2.50 = ₵5.00</li>
+                                <li>Vitamin C 1000mg - 1 × ₵8.99 = ₵8.99</li>
+                                <li>Hand Sanitizer - 1 × ₵3.25 = ₵3.25</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                
+                content.innerHTML = saleDetails;
+                modal.style.display = 'block';
+                log('Modal displayed successfully');
+                
+            } catch (error) {
+                log(`ERROR in viewSaleDetails: ${error.message}`);
+                console.error('Detailed error:', error);
+            }
+        }
+        
+        // Test if functions are properly defined
+        window.addEventListener('load', () => {
+            log('Page loaded, testing function availability');
+            
+            if (typeof viewSaleDetails === 'function') {
+                log('✓ viewSaleDetails function is defined');
+            } else {
+                log('✗ viewSaleDetails function is NOT defined');
+            }
+            
+            const modal = document.getElementById('test-modal');
+            if (modal) {
+                log('✓ Modal element found');
+            } else {
+                log('✗ Modal element NOT found');
+            }
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('test-modal');
+            if (event.target === modal) {
+                closeTestModal();
+            }
+        });
+    </script>
+</body>
+</html>
