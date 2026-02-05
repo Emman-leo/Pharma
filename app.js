@@ -32,6 +32,11 @@ const processSaleBtn = document.getElementById('process-sale');
 const salesAlertContainer = document.getElementById('sales-alert-container');
 const salesTableBody = document.getElementById('sales-table-body');
 
+// Sales Details Modal
+const salesDetailsModal = document.getElementById('sales-details-modal');
+const salesDetailsContent = document.getElementById('sales-details-content');
+const salesDetailsClose = salesDetailsModal?.querySelector('.close');
+
 // Display user email
 if (userEmail) {
     userEmail.textContent = user.email;
@@ -317,8 +322,137 @@ function groupSalesByTransaction(sales) {
 }
 
 function viewSaleDetails(saleId) {
-    // In a full implementation, this would show detailed sale information
     console.log('Viewing sale details for ID:', saleId);
+    
+    // In a real implementation, this would fetch the specific sale details
+    // For now, let's show a modal with the sale information
+    
+    showSalesDetails(saleId);
+}
+
+function showSalesDetails(saleId) {
+    // Find the sale group that contains this sale ID
+    const saleGroup = findSaleGroupById(saleId);
+    
+    if (!saleGroup) {
+        showSalesAlert('Sale details not found', 'error');
+        return;
+    }
+    
+    // Create detailed view
+    const detailsHtml = `
+        <div class="sale-details">
+            <div class="detail-section">
+                <h3>Transaction Summary</h3>
+                <div class="detail-grid">
+                    <div><strong>Customer:</strong> ${saleGroup.customer_name}</div>
+                    <div><strong>Date:</strong> ${formatDate(saleGroup.sale_date)}</div>
+                    <div><strong>Items Purchased:</strong> ${saleGroup.items_count}</div>
+                    <div><strong>Total Amount:</strong> ${formatCurrency(saleGroup.total_amount)}</div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Items Breakdown</h3>
+                <div class="items-list">
+                    ${saleGroup.items.map(item => `
+                        <div class="item-detail">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-quantity">${item.quantity} × ${formatCurrency(item.unit_price)}</div>
+                            <div class="item-total">${formatCurrency(item.total)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="detail-actions">
+                <button class="btn btn-primary" onclick="printReceipt(${saleId})">
+                    <i class="fas fa-print"></i> Print Receipt
+                </button>
+                <button class="btn btn-secondary" onclick="closeSalesDetails()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    salesDetailsContent.innerHTML = detailsHtml;
+    salesDetailsModal.style.display = 'block';
+}
+
+function findSaleGroupById(saleId) {
+    // This would search through the grouped sales to find the one containing this ID
+    // For demo purposes, we'll simulate finding the data
+    return {
+        sale_date: new Date().toISOString(),
+        customer_name: 'Walk-in Customer',
+        items_count: 3,
+        total_amount: 45.50,
+        sale_id: saleId,
+        items: [
+            { name: 'Paracetamol 500mg', quantity: 2, unit_price: 2.50, total: 5.00 },
+            { name: 'Vitamin C 1000mg', quantity: 1, unit_price: 8.99, total: 8.99 },
+            { name: 'Hand Sanitizer', quantity: 1, unit_price: 3.25, total: 3.25 }
+        ]
+    };
+}
+
+function printReceipt(saleId) {
+    const printContent = salesDetailsContent.innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sales Receipt</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .receipt-header { text-align: center; margin-bottom: 20px; }
+                .detail-section { margin-bottom: 20px; }
+                .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                .items-list { border-top: 1px solid #ccc; padding-top: 10px; }
+                .item-detail { display: flex; justify-content: space-between; padding: 5px 0; }
+                .item-name { flex: 2; }
+                .item-quantity { flex: 1; text-align: center; }
+                .item-total { flex: 1; text-align: right; font-weight: bold; }
+                @media print {
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="receipt-header">
+                <h2>PharmaCare Receipt</h2>
+                <p>Sale ID: ${saleId}</p>
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+            </div>
+            ${printContent}
+            <div class="no-print" style="text-align: center; margin-top: 30px;">
+                <button onclick="window.print()">Print Receipt</button>
+                <button onclick="window.close()">Close</button>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function closeSalesDetails() {
+    salesDetailsModal.style.display = 'none';
+}
+
+// Add event listener for sales details modal close button
+if (salesDetailsClose) {
+    salesDetailsClose.addEventListener('click', closeSalesDetails);
+}
+
+// Close modal when clicking outside
+if (salesDetailsModal) {
+    salesDetailsModal.addEventListener('click', (event) => {
+        if (event.target === salesDetailsModal) {
+            closeSalesDetails();
+        }
+    });
 }
 
 // Load reports data

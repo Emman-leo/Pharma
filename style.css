@@ -761,3 +761,78 @@ html {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-hover);
 }
+
+/* Sales Details Modal */
+.sale-details {
+    padding: 1rem;
+}
+
+.detail-section {
+    margin-bottom: 1.5rem;
+}
+
+.detail-section h3 {
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.detail-grid div {
+    padding: 0.5rem;
+    background: var(--light-bg);
+    border-radius: var(--border-radius);
+}
+
+.items-list {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.item-detail {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.item-name {
+    flex: 2;
+    font-weight: 500;
+}
+
+.item-quantity {
+    flex: 1;
+    text-align: center;
+}
+
+.item-total {
+    flex: 1;
+    text-align: right;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.detail-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-secondary {
+    background: var(--text-secondary);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--text-primary);
+}
