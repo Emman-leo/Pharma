@@ -155,10 +155,13 @@
                             <div class="form-group">
                                 <label for="medicine-search">Add Medicine</label>
                                 <div class="search-with-button">
-                                    <input type="text" id="medicine-search" placeholder="Search medicines...">
+                                    <input type="text" id="medicine-search" placeholder="Search medicines..." autocomplete="off">
                                     <button type="button" id="add-to-cart" class="btn btn-primary btn-sm">
                                         <i class="fas fa-plus"></i> Add
                                     </button>
+                                </div>
+                                <div id="medicine-search-results" class="search-results-dropdown" style="display: none;">
+                                    <div class="dropdown-options"></div>
                                 </div>
                             </div>
                                     

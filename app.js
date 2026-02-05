@@ -124,7 +124,14 @@ function updateCartDisplay() {
                 <small>${item.quantity} × ${formatCurrency(item.price)} = ${formatCurrency(itemTotal)}</small>
             </div>
             <div class="cart-item-actions">
-                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})">
+                <button class="btn btn-sm" onclick="adjustCartItem(${index}, -1)" style="background: var(--warning-color); color: white;">
+                    -
+                </button>
+                <span style="padding: 0 0.5rem;">${item.quantity}</span>
+                <button class="btn btn-sm" onclick="adjustCartItem(${index}, 1)" style="background: var(--primary-color); color: white;">
+                    +
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})" style="margin-left: 0.5rem;">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -139,6 +146,14 @@ function updateCartDisplay() {
 
 function removeFromCart(index) {
     cartItems.splice(index, 1);
+    updateCartDisplay();
+}
+
+function adjustCartItem(index, change) {
+    cartItems[index].quantity += change;
+    if (cartItems[index].quantity <= 0) {
+        cartItems.splice(index, 1);
+    }
     updateCartDisplay();
 }
 
@@ -176,15 +191,104 @@ function formatDate(dateString) {
 
 // Event Listeners for Sales
 if (medicineSearch) {
+    // Show dropdown when user types
     medicineSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        // Filter medicines for autocomplete
-        const filtered = medicines.filter(med => 
-            med.name.toLowerCase().includes(searchTerm) ||
-            med.category.toLowerCase().includes(searchTerm)
-        );
-        // Would implement dropdown suggestions here
+        showMedicineSuggestions(searchTerm);
     });
+    
+    // Hide dropdown when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!medicineSearch.contains(e.target) && !document.getElementById('medicine-search-results').contains(e.target)) {
+            document.getElementById('medicine-search-results').style.display = 'none';
+        }
+    });
+}
+
+function showMedicineSuggestions(searchTerm) {
+    const resultsContainer = document.getElementById('medicine-search-results');
+    const dropdownOptions = resultsContainer.querySelector('.dropdown-options');
+    
+    if (!searchTerm.trim()) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    const filtered = medicines.filter(med => 
+        med.name.toLowerCase().includes(searchTerm) ||
+        med.category.toLowerCase().includes(searchTerm)
+    );
+    
+    if (filtered.length === 0) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    dropdownOptions.innerHTML = '';
+    
+    filtered.slice(0, 10).forEach(medicine => {
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.innerHTML = `
+            <div class="medicine-name">${medicine.name}</div>
+            <div class="medicine-details">Category: ${medicine.category || 'N/A'} | Price: ${formatCurrency(medicine.price)} | Stock: ${medicine.quantity}</div>
+        `;
+        option.addEventListener('click', () => {
+            selectMedicine(medicine);
+        });
+        dropdownOptions.appendChild(option);
+    });
+    
+    resultsContainer.style.display = 'block';
+}
+
+function selectMedicine(medicine) {
+    medicineSearch.value = medicine.name;
+    document.getElementById('medicine-search-results').style.display = 'none';
+    
+    // Add to cart automatically
+    addToCart(medicine);
+}
+
+function addToCart(medicine) {
+    if (!medicine) {
+        const searchTerm = medicineSearch.value.toLowerCase();
+        medicine = medicines.find(med => 
+            med.name.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (!medicine) {
+        showSalesAlert('Medicine not found', 'error');
+        return;
+    }
+    
+    if (medicine.quantity <= 0) {
+        showSalesAlert('Medicine out of stock', 'error');
+        return;
+    }
+    
+    // Add to cart
+    const existingItem = cartItems.find(item => item.id === medicine.id);
+    if (existingItem) {
+        if (existingItem.quantity >= medicine.quantity) {
+            showSalesAlert('Not enough stock available', 'error');
+            return;
+        }
+        existingItem.quantity += 1;
+    } else {
+        cartItems.push({
+            id: medicine.id,
+            name: medicine.name,
+            price: medicine.price,
+            quantity: 1
+        });
+    }
+    
+    medicineSearch.value = '';
+    document.getElementById('medicine-search-results').style.display = 'none';
+    updateCartDisplay();
+    showSalesAlert(`${medicine.name} added to cart`);
 }
 
 if (addToCartBtn) {
@@ -199,27 +303,7 @@ if (addToCartBtn) {
             return;
         }
         
-        if (medicine.quantity <= 0) {
-            showSalesAlert('Medicine out of stock', 'error');
-            return;
-        }
-        
-        // Add to cart
-        const existingItem = cartItems.find(item => item.id === medicine.id);
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cartItems.push({
-                id: medicine.id,
-                name: medicine.name,
-                price: medicine.price,
-                quantity: 1
-            });
-        }
-        
-        medicineSearch.value = '';
-        updateCartDisplay();
-        showSalesAlert(`${medicine.name} added to cart`);
+        addToCart(medicine);
     });
 }
 
@@ -237,24 +321,41 @@ if (processSaleBtn) {
         
         // Process sale
         try {
-            // Add sale record to database
-            const saleData = {
-                customer_name: customerName,
-                total_amount: totalAmount,
-                items: cartItems,
-                sale_date: new Date().toISOString()
-            };
-            
             // Update inventory quantities
             for (const item of cartItems) {
                 const medicine = medicines.find(m => m.id === item.id);
                 if (medicine) {
                     const newQuantity = medicine.quantity - item.quantity;
-                    await supabase
+                    if (newQuantity < 0) {
+                        showSalesAlert(`Insufficient stock for ${medicine.name}`, 'error');
+                        return;
+                    }
+                    
+                    const { error } = await supabase
                         .from('inventory')
                         .update({ quantity: newQuantity })
                         .eq('id', item.id);
+                    
+                    if (error) {
+                        throw error;
+                    }
                 }
+            }
+            
+            // Add sale record to database
+            const saleData = {
+                customer_name: customerName,
+                total_amount: totalAmount,
+                items: JSON.stringify(cartItems),
+                sale_date: new Date().toISOString()
+            };
+            
+            const { error: saleError } = await supabase
+                .from('sales')
+                .insert([saleData]);
+            
+            if (saleError) {
+                throw saleError;
             }
             
             showSalesAlert(`Sale processed successfully! Total: ${formatCurrency(totalAmount)}`, 'success');
@@ -264,6 +365,7 @@ if (processSaleBtn) {
             document.getElementById('customer-name').value = '';
             updateCartDisplay();
             medicineSearch.value = '';
+            document.getElementById('medicine-search-results').style.display = 'none';
             
             // Refresh inventory
             await refreshMedicines();
