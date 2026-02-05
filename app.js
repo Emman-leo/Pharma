@@ -159,19 +159,153 @@ function adjustCartItem(index, change) {
 
 // Load sales data
 async function loadSalesData() {
-    // This would fetch sales from database
     console.log('Loading sales data...');
-    // For now, we'll implement the basic structure
+    
+    try {
+        const { data: sales, error } = await supabase
+            .from('sales')
+            .select('*')
+            .order('sale_date', { ascending: false })
+            .limit(10);
+        
+        if (error) {
+            console.error('Error loading sales:', error);
+            return;
+        }
+        
+        displaySalesHistory(sales);
+    } catch (error) {
+        console.error('Error in loadSalesData:', error);
+    }
+}
+
+function displaySalesHistory(sales) {
+    const salesTableBody = document.getElementById('sales-table-body');
+    
+    if (!sales || sales.length === 0) {
+        salesTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    No sales recorded yet
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Group sales by date/customer to show as transactions
+    const groupedSales = groupSalesByTransaction(sales);
+    
+    salesTableBody.innerHTML = '';
+    
+    groupedSales.forEach(saleGroup => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+            <td>${formatDate(saleGroup.sale_date)}</td>
+            <td>${saleGroup.customer_name}</td>
+            <td>${saleGroup.items_count} items</td>
+            <td>${formatCurrency(saleGroup.total_amount)}</td>
+            <td>
+                <button class="btn btn-info btn-sm" onclick="viewSaleDetails(${saleGroup.sale_id})">
+                    <i class="fas fa-eye"></i> View
+                </button>
+            </td>
+        `;
+        
+        salesTableBody.appendChild(row);
+    });
+}
+
+function groupSalesByTransaction(sales) {
+    // Group individual sales records by date and customer to form transactions
+    const grouped = {};
+    
+    sales.forEach(sale => {
+        const key = `${sale.customer_name}_${sale.sale_date.split('T')[0]}`;
+        
+        if (!grouped[key]) {
+            grouped[key] = {
+                sale_date: sale.sale_date,
+                customer_name: sale.customer_name,
+                items_count: 0,
+                total_amount: 0,
+                sale_id: sale.id,
+                items: []
+            };
+        }
+        
+        grouped[key].items_count += sale.quantity_sold;
+        grouped[key].total_amount += sale.total_amount;
+        grouped[key].items.push({
+            name: sale.product_name,
+            quantity: sale.quantity_sold,
+            unit_price: sale.unit_price,
+            total: sale.total_amount
+        });
+    });
+    
+    return Object.values(grouped).sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
+}
+
+function viewSaleDetails(saleId) {
+    // In a full implementation, this would show detailed sale information
+    console.log('Viewing sale details for ID:', saleId);
 }
 
 // Load reports data
 async function loadReportsData() {
-    // This would load report statistics
-    console.log('Loading reports data...');
-    // Update dashboard stats
-    document.getElementById('today-sales').textContent = '₵0.00';
-    document.getElementById('month-sales').textContent = '₵0.00';
-    document.getElementById('best-selling').textContent = '-';
+    try {
+        // Get today's sales
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todaySales, error: todayError } = await supabase
+            .from('sales')
+            .select('total_amount')
+            .gte('sale_date', `${today}T00:00:00`)
+            .lte('sale_date', `${today}T23:59:59`);
+        
+        let todayTotal = 0;
+        if (todaySales) {
+            todayTotal = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        }
+        
+        // Get this month's sales
+        const year = new Date().getFullYear();
+        const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        const { data: monthSales, error: monthError } = await supabase
+            .from('sales')
+            .select('total_amount')
+            .ilike('sale_date', `${year}-${month}%`);
+        
+        let monthTotal = 0;
+        if (monthSales) {
+            monthTotal = monthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        }
+        
+        // Get best selling product
+        const { data: bestSellingData, error: bestSellingError } = await supabase
+            .from('sales')
+            .select('product_name, SUM(quantity_sold) as total_sold')
+            .group('product_name')
+            .order('total_sold', { ascending: false })
+            .limit(1);
+        
+        const bestSelling = bestSellingData && bestSellingData.length > 0 
+            ? `${bestSellingData[0].product_name} (${bestSellingData[0].total_sold} sold)`
+            : '-';
+        
+        // Update dashboard stats
+        document.getElementById('today-sales').textContent = formatCurrency(todayTotal);
+        document.getElementById('month-sales').textContent = formatCurrency(monthTotal);
+        document.getElementById('best-selling').textContent = bestSelling;
+        
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        document.getElementById('today-sales').textContent = '₵0.00';
+        document.getElementById('month-sales').textContent = '₵0.00';
+        document.getElementById('best-selling').textContent = '-';
+    }
 }
 
 // Format currency
