@@ -1,7 +1,14 @@
 import { supabase } from './supabase.js';
 
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+    window.location.href = 'auth.html';
+}
+
 const medicineTableBody = document.querySelector('tbody');
 const addMedicineForm = document.getElementById('add-medicine-form');
+const logoutButton = document.getElementById('logout-button');
 
 async function getMedicines() {
     const { data, error } = await supabase
@@ -51,6 +58,11 @@ async function addMedicine(event) {
         getMedicines(); // Refresh the table
     }
 }
+
+logoutButton.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'auth.html';
+});
 
 addMedicineForm.addEventListener('submit', addMedicine);
 
