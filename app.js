@@ -86,6 +86,7 @@ async function getMedicines() {
 
 // Display medicines in table
 function displayMedicines(medicinesToDisplay) {
+    console.log('Displaying medicines:', medicinesToDisplay);
     medicineTableBody.innerHTML = '';
     
     if (medicinesToDisplay.length === 0) {
@@ -101,6 +102,7 @@ function displayMedicines(medicinesToDisplay) {
     }
     
     medicinesToDisplay.forEach(medicine => {
+        console.log('Processing medicine:', medicine);
         const row = document.createElement('tr');
         
         // Highlight low stock items
@@ -115,10 +117,10 @@ function displayMedicines(medicinesToDisplay) {
             <td>${formatDate(medicine.expiry_date)}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-warning btn-sm" onclick="editMedicine('${medicine.id}')">
+                    <button class="btn btn-warning btn-sm" onclick="editMedicine(${medicine.id})">
                         <i class="fas fa-edit"></i> Edit
                     </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteMedicine('${medicine.id}', '${medicine.name}')">
+                    <button class="btn btn-danger btn-sm" onclick="deleteMedicine(${medicine.id}, '${medicine.name}')">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
@@ -199,12 +201,18 @@ async function addMedicine(event) {
 // Edit medicine
 async function editMedicine(id) {
     console.log('Edit medicine called with ID:', id);
+    console.log('ID type:', typeof id);
     
-    const medicine = medicines.find(med => med.id === id);
+    // Convert ID to appropriate type if needed
+    const medicineId = typeof id === 'string' ? parseInt(id) : id;
+    console.log('Converted ID:', medicineId, 'Type:', typeof medicineId);
+    
+    const medicine = medicines.find(med => med.id === medicineId);
     console.log('Found medicine:', medicine);
     
     if (!medicine) {
         console.error('Medicine not found');
+        console.error('Available medicines:', medicines.map(m => ({id: m.id, name: m.name})));
         showAlert('Medicine not found', 'error');
         return;
     }
@@ -261,6 +269,13 @@ async function updateMedicine(event) {
 
 // Delete medicine
 async function deleteMedicine(id, name) {
+    console.log('Delete medicine called with ID:', id);
+    console.log('ID type:', typeof id);
+    
+    // Convert ID to appropriate type if needed
+    const medicineId = typeof id === 'string' ? parseInt(id) : id;
+    console.log('Converted ID:', medicineId, 'Type:', typeof medicineId);
+    
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
         return;
     }
@@ -268,7 +283,7 @@ async function deleteMedicine(id, name) {
     const { error } = await supabase
         .from('inventory')
         .delete()
-        .eq('id', id);
+        .eq('id', medicineId);
     
     if (error) {
         console.error('Error deleting medicine:', error);
