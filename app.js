@@ -124,14 +124,14 @@ function updateCartDisplay() {
                 <small>${item.quantity} × ${formatCurrency(item.price)} = ${formatCurrency(itemTotal)}</small>
             </div>
             <div class="cart-item-actions">
-                <button class="btn btn-sm" onclick="adjustCartItem(${index}, -1)" style="background: var(--warning-color); color: white;">
-                    -
+                <button class="btn btn-sm" onclick="decreaseQuantity(${index})" style="background: var(--warning-color); color: white;">
+                    <i class="fas fa-minus"></i>
                 </button>
-                <span style="padding: 0 0.5rem;">${item.quantity}</span>
-                <button class="btn btn-sm" onclick="adjustCartItem(${index}, 1)" style="background: var(--primary-color); color: white;">
-                    +
+                <span style="padding: 0 0.75rem; font-weight: bold;">${item.quantity}</span>
+                <button class="btn btn-sm" onclick="increaseQuantity(${index})" style="background: var(--primary-color); color: white;">
+                    <i class="fas fa-plus"></i>
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})" style="margin-left: 0.5rem;">
+                <button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})" style="margin-left: 0.75rem;">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -144,17 +144,35 @@ function updateCartDisplay() {
     processSaleBtn.disabled = false;
 }
 
-function removeFromCart(index) {
-    cartItems.splice(index, 1);
-    updateCartDisplay();
-}
-
-function adjustCartItem(index, change) {
-    cartItems[index].quantity += change;
-    if (cartItems[index].quantity <= 0) {
+function decreaseQuantity(index) {
+    if (cartItems[index].quantity > 1) {
+        cartItems[index].quantity -= 1;
+    } else {
+        // If quantity is 1, remove the item entirely
         cartItems.splice(index, 1);
     }
     updateCartDisplay();
+    showSalesAlert('Quantity updated');
+}
+
+function increaseQuantity(index) {
+    const item = cartItems[index];
+    const medicine = medicines.find(m => m.id === item.id);
+    
+    if (medicine && item.quantity < medicine.quantity) {
+        cartItems[index].quantity += 1;
+        updateCartDisplay();
+        showSalesAlert('Quantity updated');
+    } else {
+        showSalesAlert('Cannot exceed available stock', 'error');
+    }
+}
+
+function removeFromCart(index) {
+    const itemName = cartItems[index].name;
+    cartItems.splice(index, 1);
+    updateCartDisplay();
+    showSalesAlert(`${itemName} removed from cart`);
 }
 
 // Load sales data
@@ -380,8 +398,16 @@ function selectMedicine(medicine) {
     medicineSearch.value = medicine.name;
     document.getElementById('medicine-search-results').style.display = 'none';
     
-    // Add to cart automatically
-    addToCart(medicine);
+    // Check if item is already in cart
+    const existingItemIndex = cartItems.findIndex(item => item.id === medicine.id);
+    
+    if (existingItemIndex !== -1) {
+        // If already in cart, increase quantity
+        increaseQuantity(existingItemIndex);
+    } else {
+        // Add new item to cart
+        addToCart(medicine);
+    }
 }
 
 function addToCart(medicine) {
@@ -410,6 +436,7 @@ function addToCart(medicine) {
             return;
         }
         existingItem.quantity += 1;
+        showSalesAlert(`${medicine.name} quantity increased to ${existingItem.quantity}`);
     } else {
         cartItems.push({
             id: medicine.id,
@@ -417,12 +444,12 @@ function addToCart(medicine) {
             price: medicine.price,
             quantity: 1
         });
+        showSalesAlert(`${medicine.name} added to cart (Qty: 1)`);
     }
     
     medicineSearch.value = '';
     document.getElementById('medicine-search-results').style.display = 'none';
     updateCartDisplay();
-    showSalesAlert(`${medicine.name} added to cart`);
 }
 
 if (addToCartBtn) {
