@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Schema Check</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .error { background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #d4edda; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Database Schema Verification</h1>
+        <div id="status"></div>
+        <div id="results"></div>
+        
+        <button onclick="checkSchema()">Check Table Schema</button>
+        <button onclick="testInsert()">Test Insert with Sample Data</button>
+        <button onclick="checkPermissions()">Check Permissions</button>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabase.js';
+        
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function showResult(title, content) {
+            resultsDiv.innerHTML += `
+                <div style="margin: 15px 0;">
+                    <h3>${title}</h3>
+                    <pre>${JSON.stringify(content, null, 2)}</pre>
+                </div>
+            `;
+        }
+        
+        async function checkSchema() {
+            showStatus('Checking inventory table schema...', 'info');
+            
+            try {
+                // Try to get table info
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    showResult('Schema Check Error', error);
+                    return;
+                }
+                
+                showStatus('✅ Successfully accessed inventory table', 'success');
+                
+                // Get column information by describing the first row
+                if (data && data.length > 0) {
+                    const columns = Object.keys(data[0]);
+                    showResult('Available Columns', columns);
+                    showResult('Sample Data Structure', data[0]);
+                } else {
+                    showResult('Table Status', 'Table exists but is empty');
+                }
+                
+            } catch (error) {
+                showResult('Schema Check Failed', error);
+            }
+        }
+        
+        async function testInsert() {
+            showStatus('Testing insert operation...', 'info');
+            
+            // Test data that should work
+            const testData = {
+                name: 'Schema Test Medicine',
+                category: 'Prescription Medications',
+                quantity: 10,
+                price: 9.99
+            };
+            
+            try {
+                showResult('Test Data Being Inserted', testData);
+                
+                const { data, error } = await supabase
+                    .from('inventory')
+                    .insert([testData])
+                    .select();
+                
+                if (error) {
+                    showResult('Insert Test FAILED', {
+                        error: error.message,
+                        code: error.code,
+                        details: error.details || 'No details provided'
+                    });
+                } else {
+                    showStatus('✅ Insert test successful!', 'success');
+                    showResult('Inserted Data', data[0]);
+                    
+                    // Clean up - delete the test item
+                    if (data && data[0] && data[0].id) {
+                        await supabase
+                            .from('inventory')
+                            .delete()
+                            .eq('id', data[0].id);
+                        showResult('Cleanup', 'Test item removed');
+                    }
+                }
+                
+            } catch (error) {
+                showResult('Insert Test Error', error);
+            }
+        }
+        
+        async function checkPermissions() {
+            showStatus('Checking database permissions...', 'info');
+            
+            try {
+                // Test different operations
+                const tests = [
+                    { name: 'SELECT', op: () => supabase.from('inventory').select('id').limit(1) },
+                    { name: 'INSERT', op: () => supabase.from('inventory').insert([{name: 'Perm Test', category: 'Test', quantity: 1, price: 1}]).select() },
+                    { name: 'UPDATE', op: () => supabase.from('inventory').update({name: 'Updated'}).eq('id', 999999) },
+                    { name: 'DELETE', op: () => supabase.from('inventory').delete().eq('id', 999999) }
+                ];
+                
+                const results = {};
+                
+                for (const test of tests) {
+                    try {
+                        const { error } = await test.op();
+                        results[test.name] = error ? `❌ Failed: ${error.message}` : '✅ Success';
+                        
+                        // Clean up any test data if needed
+                        if (test.name === 'INSERT' && !error) {
+                            // Would need to delete the inserted item
+                        }
+                    } catch (err) {
+                        results[test.name] = `❌ Error: ${err.message}`;
+                    }
+                }
+                
+                showResult('Permission Test Results', results);
+                
+            } catch (error) {
+                showResult('Permission Check Error', error);
+            }
+        }
+        
+        // Run initial check
+        window.addEventListener('load', () => {
+            showStatus('Ready to check database schema and permissions', 'info');
+        });
+    </script>
+</body>
+</html>

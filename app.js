@@ -65,6 +65,8 @@ function isLowStock(quantity) {
 
 // Get medicines from database
 async function getMedicines() {
+    console.log('Fetching medicines from database...');
+    
     const { data, error } = await supabase
         .from('inventory')
         .select('*')
@@ -72,10 +74,13 @@ async function getMedicines() {
 
     if (error) {
         console.error('Error fetching medicines:', error);
-        showAlert('Error loading medicines', 'error');
+        console.error('Error details:', error.message);
+        console.error('Error code:', error.code);
+        showAlert('Error loading medicines: ' + error.message, 'error');
         return [];
     }
     
+    console.log('Successfully fetched', data.length, 'medicines');
     return data || [];
 }
 
@@ -181,7 +186,9 @@ async function addMedicine(event) {
     
     if (error) {
         console.error('Error adding medicine:', error);
-        showAlert('Error adding medicine: ' + error.message, 'error');
+        console.error('Error details:', error.message);
+        console.error('Error code:', error.code);
+        showAlert('Error adding medicine: ' + error.message + ' (Code: ' + error.code + ')', 'error');
     } else {
         showAlert('Medicine added successfully!');
         addMedicineForm.reset();
