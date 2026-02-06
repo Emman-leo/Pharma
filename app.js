@@ -355,73 +355,125 @@ if (salesDetailsModal) {
 
 // Load reports data
 async function loadReportsData() {
+    console.log('Loading reports data...');
     try {
-        // Get today's sales
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        // Get today's sales - using proper date range with timezone handling
+        const today = new Date();
+        const todayStart = new Date(today.setHours(0, 0, 0, 0));
+        const todayEnd = new Date(today.setHours(23, 59, 59, 999));
+        
+        const yesterday = new Date(Date.now() - 86400000);
+        const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0));
+        const yesterdayEnd = new Date(yesterday.setHours(23, 59, 59, 999));
+        
+        console.log('Today range:', todayStart.toISOString(), 'to', todayEnd.toISOString());
+        console.log('Yesterday range:', yesterdayStart.toISOString(), 'to', yesterdayEnd.toISOString());
         
         const { data: todaySales, error: todayError } = await supabase
             .from('sales')
-            .select('total_amount')
-            .gte('sale_date', `${today}T00:00:00`)
-            .lte('sale_date', `${today}T23:59:59`);
+            .select('total_amount, sale_date')
+            .gte('sale_date', todayStart.toISOString())
+            .lte('sale_date', todayEnd.toISOString());
+        
+        console.log('Today sales query result:', todaySales, todayError);
         
         const { data: yesterdaySales, error: yesterdayError } = await supabase
             .from('sales')
-            .select('total_amount')
-            .gte('sale_date', `${yesterday}T00:00:00`)
-            .lte('sale_date', `${yesterday}T23:59:59`);
+            .select('total_amount, sale_date')
+            .gte('sale_date', yesterdayStart.toISOString())
+            .lte('sale_date', yesterdayEnd.toISOString());
+        
+        console.log('Yesterday sales query result:', yesterdaySales, yesterdayError);
         
         let todayTotal = 0;
         let yesterdayTotal = 0;
-        if (todaySales) {
-            todayTotal = todaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        if (todaySales && !todayError) {
+            todayTotal = todaySales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
         }
-        if (yesterdaySales) {
-            yesterdayTotal = yesterdaySales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        if (yesterdaySales && !yesterdayError) {
+            yesterdayTotal = yesterdaySales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
         }
         
-        // Get this month's sales
-        const year = new Date().getFullYear();
-        const month = String(new Date().getMonth() + 1).padStart(2, '0');
-        const lastMonth = new Date(year, new Date().getMonth() - 1, 1);
-        const lastMonthYear = lastMonth.getFullYear();
-        const lastMonthNum = String(lastMonth.getMonth() + 1).padStart(2, '0');
+        console.log('Calculated totals - Today:', todayTotal, 'Yesterday:', yesterdayTotal);
+        
+        // Get this month's sales - using proper date filtering
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-based
+        
+        // First day of current month
+        const monthStart = new Date(year, month, 1);
+        // Last day of current month
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // First day of last month
+        const lastMonthStart = new Date(year, month - 1, 1);
+        // Last day of last month
+        const lastMonthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+        
+        console.log('Current month range:', monthStart.toISOString(), 'to', monthEnd.toISOString());
+        console.log('Last month range:', lastMonthStart.toISOString(), 'to', lastMonthEnd.toISOString());
         
         const { data: monthSales, error: monthError } = await supabase
             .from('sales')
-            .select('total_amount')
-            .ilike('sale_date', `${year}-${month}%`);
+            .select('total_amount, sale_date')
+            .gte('sale_date', monthStart.toISOString())
+            .lte('sale_date', monthEnd.toISOString());
+        
+        console.log('Month sales query result:', monthSales, monthError);
         
         const { data: lastMonthSales, error: lastMonthError } = await supabase
             .from('sales')
-            .select('total_amount')
-            .ilike('sale_date', `${lastMonthYear}-${lastMonthNum}%`);
+            .select('total_amount, sale_date')
+            .gte('sale_date', lastMonthStart.toISOString())
+            .lte('sale_date', lastMonthEnd.toISOString());
+        
+        console.log('Last month sales query result:', lastMonthSales, lastMonthError);
         
         let monthTotal = 0;
         let lastMonthTotal = 0;
-        if (monthSales) {
-            monthTotal = monthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        if (monthSales && !monthError) {
+            monthTotal = monthSales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
         }
-        if (lastMonthSales) {
-            lastMonthTotal = lastMonthSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+        if (lastMonthSales && !lastMonthError) {
+            lastMonthTotal = lastMonthSales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
         }
+        
+        console.log('Calculated monthly totals - Current:', monthTotal, 'Last:', lastMonthTotal);
         
         // Get best selling product
         const { data: bestSellingData, error: bestSellingError } = await supabase
             .from('sales')
-            .select('product_name, SUM(quantity_sold) as total_sold')
-            .group('product_name')
-            .order('total_sold', { ascending: false })
-            .limit(1);
+            .select('product_name, quantity_sold')
+            .order('sale_date', { ascending: false })
+            .limit(100); // Get more data to calculate properly
         
-        const bestSelling = bestSellingData && bestSellingData.length > 0 
-            ? bestSellingData[0].product_name
-            : 'No sales yet';
+        console.log('Best selling raw data:', bestSellingData, bestSellingError);
         
-        const bestSellingUnits = bestSellingData && bestSellingData.length > 0 
-            ? bestSellingData[0].total_sold
-            : 0;
+        let bestSelling = 'No sales yet';
+        let bestSellingUnits = 0;
+        
+        if (bestSellingData && !bestSellingError && bestSellingData.length > 0) {
+            // Group by product and sum quantities
+            const productTotals = {};
+            bestSellingData.forEach(sale => {
+                const productName = sale.product_name;
+                const quantity = parseInt(sale.quantity_sold) || 0;
+                productTotals[productName] = (productTotals[productName] || 0) + quantity;
+            });
+            
+            // Find product with highest total
+            let maxUnits = 0;
+            for (const [product, total] of Object.entries(productTotals)) {
+                if (total > maxUnits) {
+                    maxUnits = total;
+                    bestSelling = product;
+                }
+            }
+            bestSellingUnits = maxUnits;
+        }
+        
+        console.log('Best selling calculated:', bestSelling, 'Units:', bestSellingUnits);
         
         // Get active products count
         const { data: inventoryData, error: inventoryError } = await supabase
@@ -429,9 +481,19 @@ async function loadReportsData() {
             .select('quantity')
             .gt('quantity', 0);
         
-        const activeProducts = inventoryData ? inventoryData.length : 0;
+        const activeProducts = inventoryData && !inventoryError ? inventoryData.length : 0;
+        
+        console.log('Active products:', activeProducts, inventoryData, inventoryError);
         
         // Update dashboard stats
+        console.log('Updating dashboard with values:', {
+            todaySales: todayTotal,
+            monthSales: monthTotal,
+            bestSelling: bestSelling,
+            bestSellingUnits: bestSellingUnits,
+            activeProducts: activeProducts
+        });
+        
         document.getElementById('today-sales').textContent = formatCurrency(todayTotal);
         document.getElementById('month-sales').textContent = formatCurrency(monthTotal);
         document.getElementById('best-selling').textContent = bestSelling;
@@ -461,6 +523,8 @@ async function loadReportsData() {
         // Render charts
         renderCharts();
         
+        console.log('Reports data loaded successfully');
+        
     } catch (error) {
         console.error('Error loading reports:', error);
         document.getElementById('today-sales').textContent = '₵0.00';
@@ -468,6 +532,9 @@ async function loadReportsData() {
         document.getElementById('best-selling').textContent = '-';
         document.getElementById('best-selling-units').textContent = '0 units sold';
         document.getElementById('active-products').textContent = '0';
+        
+        // Show error notification
+        showNotification('Error loading reports data: ' + error.message, 'error');
     }
 }
 
@@ -1403,6 +1470,12 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Manual refresh function for debugging
+window.refreshReports = function() {
+    console.log('Manually refreshing reports data...');
+    loadReportsData();
+};
 
 // Make functions available globally for inline event handlers
 window.editMedicine = editMedicine;
