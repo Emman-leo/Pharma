@@ -560,38 +560,94 @@ tr:hover td {
     margin-top: 0.25rem;
 }
 
-/* Tab Navigation */
+/* Main Layout */
+.main-layout {
+    display: flex;
+    min-height: calc(100vh - 70px);
+}
+
+/* Sidebar Navigation */
+.sidebar-navigation {
+    width: 280px;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+}
+
+.sidebar-header h3 {
+    color: white;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Tab Navigation - Sidebar Version */
 .tab-navigation {
     display: flex;
-    background: var(--card-bg);
-    border-bottom: 1px solid var(--border-color);
-    margin: 0 auto;
-    max-width: 1200px;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    flex-direction: column;
+    padding: 1rem 0;
+    flex: 1;
 }
 
 .tab-btn {
-    flex: 1;
-    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
     background: transparent;
     border: none;
-    border-bottom: 3px solid transparent;
     cursor: pointer;
     font-weight: 500;
     color: var(--text-secondary);
     transition: var(--transition);
-    text-align: center;
+    text-align: left;
+    border-left: 4px solid transparent;
+    margin: 0.25rem 0;
 }
 
 .tab-btn:hover {
     background: var(--light-bg);
     color: var(--text-primary);
+    border-left-color: var(--border-color);
 }
 
 .tab-btn.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-    background: var(--light-bg);
+    background: var(--primary-light);
+    border-left-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.tab-btn i {
+    font-size: 1.25rem;
+    width: 24px;
+    text-align: center;
+}
+
+.tab-btn span {
+    font-size: 1rem;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    overflow-x: auto;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
 }
 
 .tab-content {
@@ -895,18 +951,62 @@ tr:hover td {
 
 /* Responsive Design for Tabs */
 @media (max-width: 768px) {
-    .tab-navigation {
+    .main-layout {
         flex-direction: column;
     }
     
-    .tab-btn {
+    .sidebar-navigation {
+        width: 100%;
+        border-right: none;
         border-bottom: 1px solid var(--border-color);
-        border-right: 3px solid transparent;
+    }
+    
+    .sidebar-header {
+        padding: 1rem;
+    }
+    
+    .sidebar-header h3 {
+        font-size: 1.125rem;
+    }
+    
+    .tab-navigation {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0;
+    }
+    
+    .tab-btn {
+        flex: 1;
+        min-width: 120px;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        justify-content: center;
+        text-align: center;
+        padding: 1rem;
     }
     
     .tab-btn.active {
-        border-bottom-color: var(--border-color);
-        border-right-color: var(--primary-color);
+        border-left: none;
+        border-bottom-color: var(--primary-color);
+    }
+    
+    .tab-btn i {
+        display: block;
+        margin: 0 auto 0.5rem;
+        font-size: 1.125rem;
+    }
+    
+    .tab-btn span {
+        font-size: 0.875rem;
+    }
+    
+    .main-content {
+        margin-top: 0;
+    }
+    
+    .container {
+        padding: 0 1rem;
+        margin: 1rem auto;
     }
     
     .sales-layout {

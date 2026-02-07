@@ -48,33 +48,52 @@ let filteredMedicines = [];
 let cartItems = [];
 let currentSaleId = 1;
 
-// Tab Navigation
+// Tab Navigation with Persistence
+function setActiveTab(tabName) {
+    // Update active tab button
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+    
+    // Show corresponding content
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+        if (content.id === `${tabName}-tab`) {
+            content.classList.add('active');
+        }
+    });
+    
+    // Refresh data based on tab
+    if (tabName === 'inventory') {
+        refreshMedicines();
+    } else if (tabName === 'sales') {
+        loadSalesData();
+    } else if (tabName === 'reports') {
+        loadReportsData();
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('activeTab', tabName);
+}
+
+// Load saved tab on page load
+function loadSavedTab() {
+    const savedTab = localStorage.getItem('activeTab') || 'inventory';
+    setActiveTab(savedTab);
+}
+
+// Tab click handlers
 tabButtons.forEach(button => {
     button.addEventListener('click', () => {
         const tabName = button.dataset.tab;
-        
-        // Update active tab button
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        
-        // Show corresponding content
-        tabContents.forEach(content => {
-            content.classList.remove('active');
-            if (content.id === `${tabName}-tab`) {
-                content.classList.add('active');
-            }
-        });
-        
-        // Refresh data based on tab
-        if (tabName === 'inventory') {
-            refreshMedicines();
-        } else if (tabName === 'sales') {
-            loadSalesData();
-        } else if (tabName === 'reports') {
-            loadReportsData();
-        }
+        setActiveTab(tabName);
     });
 });
+
+// Load saved tab when page loads
+loadSavedTab();
 
 // Show alert messages
 function showAlert(message, type = 'success') {
