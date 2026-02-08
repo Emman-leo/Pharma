@@ -6,6 +6,7 @@
 2. Navigate to **SQL Editor**
 3. Copy and paste the updated SQL from `database.sql` file
 4. Run the queries to create the new tables and policies
+5. If you encounter any issues with RLS policies, make sure you run each CREATE TABLE statement separately first, then run the ALTER TABLE and CREATE POLICY statements.
 
 ## Step 2: Create Test Users
 
@@ -95,6 +96,12 @@ WHERE id = 'USER_UUID_HERE';
 1. Verify Supabase connection details in `supabase.js`
 2. Check that users exist in Authentication → Users
 3. Ensure user profiles exist in the `user_profiles` table
+
+### If you see 403 or 406 errors:
+1. Make sure all RLS policies are properly set up
+2. Run the SQL commands in order: first CREATE TABLE, then ALTER TABLE ENABLE RLS, then CREATE POLICY
+3. Check that the user has the correct permissions
+4. Verify that the user is authenticated before accessing protected data
 
 ## Security Notes
 

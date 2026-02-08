@@ -128,6 +128,7 @@ CREATE POLICY "Admins can update any profile" ON user_profiles FOR UPDATE USING 
     WHERE up.id = auth.uid() AND up.role = 'admin'
   )
 );
+CREATE POLICY "Allow insert for authenticated users" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Create policies for activity_log
 CREATE POLICY "Users can view their own activities" ON activity_log FOR SELECT USING (

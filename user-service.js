@@ -28,16 +28,19 @@ class UserService {
                 .eq('id', this.currentUser.id)
                 .single();
 
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-                console.error('Error loading user profile:', error);
-                return null;
+            if (error) {
+                if (error.code === 'PGRST116') { // No rows found - profile doesn't exist
+                    console.log('User profile not found, creating new profile');
+                    // Create profile if it doesn't exist
+                    return await this.createProfile();
+                } else {
+                    console.error('Error loading user profile:', error);
+                    return null;
+                }
             }
 
             if (data) {
                 this.userProfile = data;
-            } else {
-                // Create profile if it doesn't exist
-                await this.createProfile();
             }
 
             return this.userProfile;
@@ -55,24 +58,34 @@ class UserService {
             const profileData = {
                 id: this.currentUser.id,
                 email: this.currentUser.email,
-                full_name: this.currentUser.email.split('@')[0], // Default name from email
+                full_name: this.currentUser.user_metadata?.full_name || this.currentUser.email?.split('@')[0] || 'Unknown User', // Use metadata or email for name
                 role: 'staff', // Default role
                 last_login: new Date().toISOString()
             };
 
             const { data, error } = await supabase
                 .from('user_profiles')
-                .insert([profileData])
-                .select()
-                .single();
+                .insert([profileData]);
 
             if (error) {
                 console.error('Error creating profile:', error);
                 return null;
             }
-
-            this.userProfile = data;
-            return data;
+            
+            // Fetch the created profile
+            const { data: createdData, error: fetchError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', profileData.id)
+                .single();
+                
+            if (fetchError) {
+                console.error('Error fetching created profile:', fetchError);
+                return null;
+            }
+            
+            this.userProfile = createdData;
+            return createdData;
         } catch (error) {
             console.error('Error in createProfile:', error);
             return null;

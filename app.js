@@ -1,18 +1,8 @@
 import { supabase } from './supabase.js';
 import { userService } from './user-service.js';
 
-// Initialize user service
-const currentUser = await userService.init();
-
-if (!currentUser) {
-    window.location.href = 'auth.html';
-}
-
-// Display user info with role
-const userDisplay = document.getElementById('user-email');
-if (userDisplay && userService.getProfile()) {
-    userDisplay.textContent = `${userService.getProfile().full_name} (${userService.getProfile().role})`;
-}
+// Display user info with role will be handled after initialization
+// User authentication and profile loading happens in init()
 
 // DOM Elements
 const medicineTableBody = document.getElementById('medicine-table-body');
@@ -44,10 +34,8 @@ const salesDetailsModal = document.getElementById('sales-details-modal');
 const salesDetailsContent = document.getElementById('sales-details-content');
 const salesDetailsClose = salesDetailsModal?.querySelector('.close');
 
-// Display user email
-if (userEmail) {
-    userEmail.textContent = user.email;
-}
+// The user email is now handled in the user service initialization
+// Display user info with role happens after user service initialization
 
 // Global variables
 let medicines = [];
@@ -1195,6 +1183,20 @@ window.addEventListener('click', (event) => {
 
 // Initialize the application
 async function init() {
+    // Initialize user service and check authentication
+    const currentUser = await userService.init();
+    
+    if (!currentUser) {
+        window.location.href = 'auth.html';
+        return;
+    }
+    
+    // Display user info with role
+    const userDisplay = document.getElementById('user-email');
+    if (userDisplay && userService.getProfile()) {
+        userDisplay.textContent = `${userService.getProfile().full_name} (${userService.getProfile().role})`;
+    }
+    
     // Initialize tab visibility based on user role
     initializeTabVisibility();
     
@@ -1578,5 +1580,12 @@ window.refreshReports = function() {
 window.editMedicine = editMedicine;
 window.deleteMedicine = deleteMedicine;
 
-// Start the application
-init();
+// Start the application when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async () => {
+        await init();
+    });
+} else {
+    // DOM is already loaded
+    init();
+}
