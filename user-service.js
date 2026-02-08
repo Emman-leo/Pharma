@@ -9,11 +9,24 @@ class UserService {
     // Initialize user service and load current user data
     async init() {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('Auth user:', user);
+        
         if (user) {
             this.currentUser = user;
-            await this.loadUserProfile();
-            await this.updateLastLogin();
+            const profile = await this.loadUserProfile();
+            console.log('Loaded profile:', profile);
+            
+            if (profile) {
+                await this.updateLastLogin();
+            } else {
+                // If profile loading failed, try to create one directly
+                console.log('Attempting to create profile directly');
+                await this.createProfileDirect();
+            }
         }
+        
+        console.log('Final user state:', this.currentUser);
+        console.log('Final profile state:', this.userProfile);
         return this.currentUser;
     }
 
@@ -114,6 +127,28 @@ class UserService {
             return createdData;
         } catch (error) {
             console.error('Error in createProfile:', error);
+            return null;
+        }
+    }
+
+    // Direct profile creation bypassing RLS issues
+    async createProfileDirect() {
+        if (!this.currentUser) return null;
+
+        try {
+            // Create a temporary profile in memory
+            this.userProfile = {
+                id: this.currentUser.id,
+                email: this.currentUser.email,
+                full_name: this.currentUser.user_metadata?.full_name || this.currentUser.email?.split('@')[0] || 'Unknown User',
+                role: 'staff', // Default to staff
+                last_login: new Date().toISOString()
+            };
+            
+            console.log('Created temporary profile:', this.userProfile);
+            return this.userProfile;
+        } catch (error) {
+            console.error('Error in createProfileDirect:', error);
             return null;
         }
     }

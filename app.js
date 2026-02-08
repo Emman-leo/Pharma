@@ -102,6 +102,7 @@ function getAllowedTabs() {
         return ['inventory', 'sales', 'reports'];
     } else {
         // Default to staff access if no profile or role is staff
+        console.log('Defaulting to staff access - profile:', profile);
         return ['sales']; // Staff can only access sales
     }
 }
@@ -1216,8 +1217,14 @@ async function init() {
     
     // Display user info with role
     const userDisplay = document.getElementById('user-email');
-    if (userDisplay && userService.getProfile()) {
-        userDisplay.textContent = `${userService.getProfile().full_name} (${userService.getProfile().role})`;
+    const profile = userService.getProfile();
+    console.log('Profile for display:', profile);
+    
+    if (userDisplay && profile) {
+        userDisplay.textContent = `${profile.full_name} (${profile.role})`;
+    } else if (userDisplay && currentUser) {
+        // Fallback to just showing email if no profile
+        userDisplay.textContent = currentUser.email;
     }
     
     // Initialize tab visibility based on user role
