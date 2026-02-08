@@ -95,10 +95,13 @@ function canAccessTab(tabName) {
 
 // Get tabs allowed for current user role
 function getAllowedTabs() {
-    // Default to staff access if no profile is loaded
-    if (userService.isAdmin()) {
+    // Check if we have a user profile loaded
+    const profile = userService.getProfile();
+    
+    if (profile && profile.role === 'admin') {
         return ['inventory', 'sales', 'reports'];
     } else {
+        // Default to staff access if no profile or role is staff
         return ['sales']; // Staff can only access sales
     }
 }

@@ -141,14 +141,18 @@ class UserService {
                 user_id: this.currentUser.id,
                 user_name: this.userProfile?.full_name || this.currentUser.email || 'Unknown User',
                 action: action,
-                details: details
+                details: details || null
             };
 
-            await supabase
+            const { error } = await supabase
                 .from('activity_log')
                 .insert([activityData]);
+                
+            if (error) {
+                console.error('Error logging activity:', error);
+            }
         } catch (error) {
-            console.error('Error logging activity:', error);
+            console.error('Exception in logActivity:', error);
         }
     }
 
