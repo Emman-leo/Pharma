@@ -128,7 +128,10 @@ CREATE POLICY "Admins can update any profile" ON user_profiles FOR UPDATE USING 
     WHERE up.id = auth.uid() AND up.role = 'admin'
   )
 );
-CREATE POLICY "Allow insert for authenticated users" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Allow authenticated users to insert profiles" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Allow service role to manage profiles (for admin updates via SQL Editor)
+CREATE POLICY "Service role full access" ON user_profiles FOR ALL USING (auth.role() = 'service_role');
 
 -- Create policies for activity_log
 CREATE POLICY "Users can view their own activities" ON activity_log FOR SELECT USING (

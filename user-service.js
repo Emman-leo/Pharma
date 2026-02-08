@@ -63,13 +63,27 @@ class UserService {
                 last_login: new Date().toISOString()
             };
 
+            // Try to insert the profile
             const { data, error } = await supabase
                 .from('user_profiles')
                 .insert([profileData]);
 
             if (error) {
                 console.error('Error creating profile:', error);
-                return null;
+                // The profile might already exist due to manual creation, try to fetch it
+                const { data: existingData, error: fetchError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', profileData.id)
+                    .single();
+                    
+                if (fetchError) {
+                    console.error('Error fetching existing profile:', fetchError);
+                    return null;
+                }
+                
+                this.userProfile = existingData;
+                return existingData;
             }
             
             // Fetch the created profile
