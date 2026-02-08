@@ -45,19 +45,28 @@ let currentSaleId = 1;
 
 // Tab Navigation with Persistence and Role-Based Access
 function setActiveTab(tabName) {
+    console.log('Setting active tab:', tabName);
+    
     // Check if user has permission to access this tab
     if (!canAccessTab(tabName)) {
-        console.log(`User ${userService.getProfile().role} cannot access ${tabName} tab`);
+        console.log(`User ${userService.getProfile()?.role || 'unknown'} cannot access ${tabName} tab`);
         // Redirect to first allowed tab
         const firstAllowedTab = getAllowedTabs()[0] || 'sales';
         if (firstAllowedTab !== tabName) {
+            console.log('Redirecting to allowed tab:', firstAllowedTab);
             setActiveTab(firstAllowedTab);
             return;
         }
     }
     
     // Update active tab button
-    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabButtons.forEach(btn => {
+        btn.classList.remove('active');
+        // Also remove any style overrides
+        btn.style.removeProperty('display');
+        btn.style.removeProperty('visibility');
+    });
+    
     const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
     if (activeButton) {
         activeButton.classList.add('active');
@@ -66,6 +75,10 @@ function setActiveTab(tabName) {
     // Show corresponding content
     tabContents.forEach(content => {
         content.classList.remove('active');
+        // Also remove any style overrides
+        content.style.removeProperty('display');
+        content.style.removeProperty('visibility');
+        
         if (content.id === `${tabName}-tab`) {
             content.classList.add('active');
         }
@@ -85,6 +98,7 @@ function setActiveTab(tabName) {
     
     // Save to localStorage
     localStorage.setItem('activeTab', tabName);
+    console.log('Active tab set to:', tabName);
 }
 
 // Check if user can access a specific tab
@@ -123,12 +137,16 @@ function isUserStaff() {
 // Initialize tab visibility based on user role
 function initializeTabVisibility() {
     const allowedTabs = getAllowedTabs();
+    console.log('Initializing tab visibility for allowed tabs:', allowedTabs);
     
     tabButtons.forEach(button => {
         const tabName = button.dataset.tab;
+        console.log('Processing tab button:', tabName, 'Allowed:', allowedTabs.includes(tabName));
         if (allowedTabs.includes(tabName)) {
             button.style.display = 'block';
             button.style.visibility = 'visible';
+            button.style.removeProperty('display'); // Remove any previous display property
+            button.style.removeProperty('visibility'); // Remove any previous visibility property
         } else {
             button.style.display = 'none';
             button.style.visibility = 'hidden';
@@ -138,27 +156,51 @@ function initializeTabVisibility() {
     // Hide tab content for unauthorized tabs
     tabContents.forEach(content => {
         const tabName = content.id.replace('-tab', '');
+        console.log('Processing tab content:', tabName, 'Allowed:', allowedTabs.includes(tabName));
         if (allowedTabs.includes(tabName)) {
             content.style.display = 'block';
             content.style.visibility = 'visible';
+            content.style.removeProperty('display'); // Remove any previous display property
+            content.style.removeProperty('visibility'); // Remove any previous visibility property
         } else {
             content.style.display = 'none';
             content.style.visibility = 'hidden';
         }
     });
+    
+    // Force reflow to ensure changes take effect
+    document.body.offsetHeight;
 }
 
 // Load saved tab on page load
 function loadSavedTab() {
-    const savedTab = localStorage.getItem('activeTab') || 'inventory';
-    setActiveTab(savedTab);
+    // Wait a bit to ensure DOM is fully loaded and user service is initialized
+    setTimeout(() => {
+        const allowedTabs = getAllowedTabs();
+        const savedTab = localStorage.getItem('activeTab');
+        
+        // Check if saved tab is allowed for current user, otherwise use first allowed tab
+        const tabToLoad = savedTab && allowedTabs.includes(savedTab) ? savedTab : allowedTabs[0] || 'sales';
+        
+        console.log('Loading tab:', tabToLoad, 'from saved:', savedTab, 'allowed:', allowedTabs);
+        setActiveTab(tabToLoad);
+    }, 100); // Small delay to ensure everything is initialized
 }
 
 // Tab click handlers
 tabButtons.forEach(button => {
     button.addEventListener('click', () => {
         const tabName = button.dataset.tab;
-        setActiveTab(tabName);
+        console.log('Tab clicked:', tabName);
+        
+        // Check if user has access to this tab
+        if (canAccessTab(tabName)) {
+            setActiveTab(tabName);
+        } else {
+            console.log('Access denied to tab:', tabName);
+            // Optionally show an alert
+            alert('You do not have permission to access this tab.');
+        }
     });
 });
 
@@ -1230,9 +1272,8 @@ async function init() {
     // Initialize tab visibility based on user role
     initializeTabVisibility();
     
-    // Load saved tab or default to first allowed tab
-    const savedTab = localStorage.getItem('activeTab') || getAllowedTabs()[0] || 'sales';
-    setActiveTab(savedTab);
+    // Load saved tab considering user permissions
+    loadSavedTab();
     
     // Refresh medicines data
     await refreshMedicines();
@@ -1613,9 +1654,15 @@ window.deleteMedicine = deleteMedicine;
 // Start the application when DOM is loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
-        await init();
+        // Small delay to ensure all DOM elements are fully rendered
+        setTimeout(async () => {
+            await init();
+        }, 100);
     });
 } else {
     // DOM is already loaded
-    init();
+    // Small delay to ensure all DOM elements are fully rendered
+    setTimeout(async () => {
+        init();
+    }, 100);
 }
