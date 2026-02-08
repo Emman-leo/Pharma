@@ -95,11 +95,25 @@ function canAccessTab(tabName) {
 
 // Get tabs allowed for current user role
 function getAllowedTabs() {
+    // Default to staff access if no profile is loaded
     if (userService.isAdmin()) {
         return ['inventory', 'sales', 'reports'];
     } else {
         return ['sales']; // Staff can only access sales
     }
+}
+
+// Safe way to check user role
+function isUserAdmin() {
+    const profile = userService.getProfile();
+    return profile && profile.role === 'admin';
+}
+
+// Safe way to check if user is staff
+function isUserStaff() {
+    const profile = userService.getProfile();
+    // Default to staff if no profile is loaded
+    return !profile || !profile.role || profile.role === 'staff';
 }
 
 // Initialize tab visibility based on user role
@@ -110,16 +124,22 @@ function initializeTabVisibility() {
         const tabName = button.dataset.tab;
         if (allowedTabs.includes(tabName)) {
             button.style.display = 'block';
+            button.style.visibility = 'visible';
         } else {
             button.style.display = 'none';
+            button.style.visibility = 'hidden';
         }
     });
     
     // Hide tab content for unauthorized tabs
     tabContents.forEach(content => {
         const tabName = content.id.replace('-tab', '');
-        if (!allowedTabs.includes(tabName)) {
+        if (allowedTabs.includes(tabName)) {
+            content.style.display = 'block';
+            content.style.visibility = 'visible';
+        } else {
             content.style.display = 'none';
+            content.style.visibility = 'hidden';
         }
     });
 }
