@@ -1,10 +1,17 @@
 import { supabase } from './supabase.js';
+import { userService } from './user-service.js';
 
-// Authentication check
-const { data: { user } } = await supabase.auth.getUser();
+// Initialize user service
+const currentUser = await userService.init();
 
-if (!user) {
+if (!currentUser) {
     window.location.href = 'auth.html';
+}
+
+// Display user info with role
+const userDisplay = document.getElementById('user-email');
+if (userDisplay && userService.getProfile()) {
+    userDisplay.textContent = `${userService.getProfile().full_name} (${userService.getProfile().role})`;
 }
 
 // DOM Elements
@@ -48,8 +55,19 @@ let filteredMedicines = [];
 let cartItems = [];
 let currentSaleId = 1;
 
-// Tab Navigation with Persistence
+// Tab Navigation with Persistence and Role-Based Access
 function setActiveTab(tabName) {
+    // Check if user has permission to access this tab
+    if (!canAccessTab(tabName)) {
+        console.log(`User ${userService.getProfile().role} cannot access ${tabName} tab`);
+        // Redirect to first allowed tab
+        const firstAllowedTab = getAllowedTabs()[0] || 'sales';
+        if (firstAllowedTab !== tabName) {
+            setActiveTab(firstAllowedTab);
+            return;
+        }
+    }
+    
     // Update active tab button
     tabButtons.forEach(btn => btn.classList.remove('active'));
     const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
@@ -68,14 +86,54 @@ function setActiveTab(tabName) {
     // Refresh data based on tab
     if (tabName === 'inventory') {
         refreshMedicines();
+        userService.logActivity('accessed_inventory', 'Viewed inventory management');
     } else if (tabName === 'sales') {
         loadSalesData();
+        userService.logActivity('accessed_sales', 'Viewed sales interface');
     } else if (tabName === 'reports') {
         loadReportsData();
+        userService.logActivity('accessed_reports', 'Viewed reports dashboard');
     }
     
     // Save to localStorage
     localStorage.setItem('activeTab', tabName);
+}
+
+// Check if user can access a specific tab
+function canAccessTab(tabName) {
+    const allowedTabs = getAllowedTabs();
+    return allowedTabs.includes(tabName);
+}
+
+// Get tabs allowed for current user role
+function getAllowedTabs() {
+    if (userService.isAdmin()) {
+        return ['inventory', 'sales', 'reports'];
+    } else {
+        return ['sales']; // Staff can only access sales
+    }
+}
+
+// Initialize tab visibility based on user role
+function initializeTabVisibility() {
+    const allowedTabs = getAllowedTabs();
+    
+    tabButtons.forEach(button => {
+        const tabName = button.dataset.tab;
+        if (allowedTabs.includes(tabName)) {
+            button.style.display = 'block';
+        } else {
+            button.style.display = 'none';
+        }
+    });
+    
+    // Hide tab content for unauthorized tabs
+    tabContents.forEach(content => {
+        const tabName = content.id.replace('-tab', '');
+        if (!allowedTabs.includes(tabName)) {
+            content.style.display = 'none';
+        }
+    });
 }
 
 // Load saved tab on page load
@@ -265,6 +323,11 @@ async function loadSalesData() {
         }
         
         displaySalesHistory(sales);
+        
+        // Log activity for staff users
+        if (userService.isStaff()) {
+            userService.logActivity('viewed_sales_history', `Viewed ${sales ? sales.length : 0} recent sales records`);
+        }
     } catch (error) {
         console.error('Error in loadSalesData:', error);
     }
@@ -818,6 +881,11 @@ if (processSaleBtn) {
             
             showSalesAlert(`Sale processed successfully! Total: ${formatCurrency(totalAmount)}`, 'success');
             
+            // Log staff activity
+            if (userService.isStaff()) {
+                userService.logActivity('processed_sale', `Processed sale for ${customerName}, Total: ${formatCurrency(totalAmount)}, Items: ${cartItems.length}`);
+            }
+            
             // Reset cart
             cartItems = [];
             document.getElementById('customer-name').value = '';
@@ -1127,7 +1195,17 @@ window.addEventListener('click', (event) => {
 
 // Initialize the application
 async function init() {
+    // Initialize tab visibility based on user role
+    initializeTabVisibility();
+    
+    // Load saved tab or default to first allowed tab
+    const savedTab = localStorage.getItem('activeTab') || getAllowedTabs()[0] || 'sales';
+    setActiveTab(savedTab);
+    
+    // Refresh medicines data
     await refreshMedicines();
+    
+    console.log('Application initialized for user:', userService.getProfile());
 }
 
 // Report Event Listeners

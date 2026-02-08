@@ -88,3 +88,55 @@ CREATE POLICY "Enable insert access for all users" ON suppliers FOR INSERT WITH 
 CREATE POLICY "Enable update access for all users" ON suppliers FOR UPDATE USING (true);
 
 CREATE POLICY "Enable read access for all users" ON categories FOR SELECT USING (true);
+
+-- Create user profiles table
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  email VARCHAR(255) NOT NULL,
+  full_name VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'staff',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- Create activity log table
+CREATE TABLE IF NOT EXISTS activity_log (
+  id SERIAL PRIMARY KEY,
+  user_id UUID REFERENCES user_profiles(id),
+  user_name VARCHAR(255),
+  action VARCHAR(100) NOT NULL,
+  details TEXT,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security for new tables
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for user_profiles
+CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update their own profile" ON user_profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins can view all profiles" ON user_profiles FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM user_profiles up 
+    WHERE up.id = auth.uid() AND up.role = 'admin'
+  )
+);
+CREATE POLICY "Admins can update any profile" ON user_profiles FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM user_profiles up 
+    WHERE up.id = auth.uid() AND up.role = 'admin'
+  )
+);
+
+-- Create policies for activity_log
+CREATE POLICY "Users can view their own activities" ON activity_log FOR SELECT USING (
+  user_id = auth.uid()
+);
+CREATE POLICY "Admins can view all activities" ON activity_log FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM user_profiles up 
+    WHERE up.id = auth.uid() AND up.role = 'admin'
+  )
+);
+CREATE POLICY "Anyone can insert activities" ON activity_log FOR INSERT WITH CHECK (true);
