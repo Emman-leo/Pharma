@@ -429,6 +429,183 @@ function displaySalesHistory(sales) {
     });
 }
 
+// Show detailed sale information in modal
+function showSaleDetailsModal(sale) {
+    // Create or get the modal element
+    let modal = document.getElementById('sale-details-modal');
+    
+    if (!modal) {
+        // Create the modal if it doesn't exist
+        modal = document.createElement('div');
+        modal.id = 'sale-details-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <span class="close">&times;</span>
+                <div id="sale-details-content"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Format the sale details
+    const content = document.getElementById('sale-details-content');
+    content.innerHTML = `
+        <h2><i class="fas fa-receipt"></i> Sale Details</h2>
+        <div class="sale-info-grid">
+            <div class="info-item">
+                <label>Sale ID:</label>
+                <span>#${sale.id}</span>
+            </div>
+            <div class="info-item">
+                <label>Customer:</label>
+                <span>${sale.customer_name}</span>
+            </div>
+            <div class="info-item">
+                <label>Date:</label>
+                <span>${formatDateTime(sale.sale_date)}</span>
+            </div>
+            <div class="info-item">
+                <label>Product:</label>
+                <span>${sale.product_name}</span>
+            </div>
+            <div class="info-item">
+                <label>Quantity Sold:</label>
+                <span>${sale.quantity_sold}</span>
+            </div>
+            <div class="info-item">
+                <label>Unit Price:</label>
+                <span>${formatCurrency(sale.unit_price)}</span>
+            </div>
+            <div class="info-item">
+                <label>Total Amount:</label>
+                <span style="font-weight: bold; color: var(--primary-color);">${formatCurrency(sale.total_amount)}</span>
+            </div>
+            ${sale.product_id ? `
+            <div class="info-item">
+                <label>Product ID:</label>
+                <span>${sale.product_id}</span>
+            </div>` : ''}
+        </div>
+        
+        <div class="detail-actions">
+            <button class="btn btn-secondary" onclick="document.getElementById('sale-details-modal').style.display='none'">
+                <i class="fas fa-times"></i> Close
+            </button>
+            <button class="btn btn-primary" onclick="printSaleReceipt(${sale.id})">
+                <i class="fas fa-print"></i> Print Receipt
+            </button>
+        </div>
+    `;
+    
+    // Show the modal
+    modal.style.display = 'block';
+}
+
+// Print sale receipt
+window.printSaleReceipt = function(saleId) {
+    // Create printable receipt
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    
+    // Get sale details (you'd fetch this from database in real implementation)
+    const sale = {
+        id: saleId,
+        customer_name: 'Walk-in Customer',
+        sale_date: new Date().toLocaleString(),
+        product_name: 'Sample Product',
+        quantity_sold: 1,
+        unit_price: 10.00,
+        total_amount: 10.00
+    };
+    
+    const receiptContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sale Receipt #${saleId}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    padding: 20px; 
+                    max-width: 300px; 
+                    margin: 0 auto; 
+                }
+                .receipt-header { 
+                    text-align: center; 
+                    border-bottom: 2px solid #000; 
+                    padding-bottom: 10px; 
+                    margin-bottom: 20px; 
+                }
+                .receipt-item { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin-bottom: 10px; 
+                }
+                .total { 
+                    border-top: 1px solid #000; 
+                    padding-top: 10px; 
+                    font-weight: bold; 
+                }
+            </style>
+        </head>
+        <body>
+            <div class="receipt-header">
+                <h2>PHARMACARE</h2>
+                <p>Sales Receipt</p>
+                <p>Receipt #: ${saleId}</p>
+                <p>${sale.sale_date}</p>
+            </div>
+            
+            <div class="receipt-item">
+                <span>Customer:</span>
+                <span>${sale.customer_name}</span>
+            </div>
+            
+            <div class="receipt-item">
+                <span>Item:</span>
+                <span>${sale.product_name}</span>
+            </div>
+            
+            <div class="receipt-item">
+                <span>Quantity:</span>
+                <span>${sale.quantity_sold}</span>
+            </div>
+            
+            <div class="receipt-item">
+                <span>Unit Price:</span>
+                <span>${formatCurrency(sale.unit_price)}</span>
+            </div>
+            
+            <div class="receipt-item total">
+                <span>TOTAL:</span>
+                <span>${formatCurrency(sale.total_amount)}</span>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <p>Thank you for your purchase!</p>
+                <p>www.pharmacare.com</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    printWindow.document.write(receiptContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
 function groupSalesByTransaction(sales) {
     // Group individual sales records by date and customer to form transactions
     const grouped = {};
@@ -461,11 +638,35 @@ function groupSalesByTransaction(sales) {
 }
 
 // Make the function globally available
-window.viewSaleDetails = function(saleId) {
+window.viewSaleDetails = async function(saleId) {
     console.log('View button clicked for sale ID:', saleId);
     
-    // Simple working implementation
-    alert(`Viewing sale details for transaction #${saleId}\n\nCustomer: Walk-in Customer\nDate: ${new Date().toLocaleDateString()}\nTotal: ${formatCurrency(45.50)}\n\nIn the full version, this would show a detailed modal with all transaction information.`);
+    try {
+        // Fetch detailed sale information
+        const { data: saleDetails, error } = await supabase
+            .from('sales')
+            .select('*')
+            .eq('id', saleId)
+            .single();
+            
+        if (error) {
+            console.error('Error fetching sale details:', error);
+            alert('Error loading sale details: ' + error.message);
+            return;
+        }
+        
+        if (!saleDetails) {
+            alert('Sale not found');
+            return;
+        }
+        
+        // Display detailed modal
+        showSaleDetailsModal(saleDetails);
+        
+    } catch (error) {
+        console.error('Error in viewSaleDetails:', error);
+        alert('Error: ' + error.message);
+    }
 };
 
 // Test function for debugging
