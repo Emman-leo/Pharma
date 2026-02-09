@@ -38,6 +38,10 @@
                     <i class="fas fa-chart-bar"></i>
                     <span>Reports</span>
                 </button>
+                <button class="tab-btn" data-tab="activities">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Activities</span>
+                </button>
             </div>
         </nav>
 
@@ -381,6 +385,17 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activities Tab Content -->
+        <div id="activities-tab" class="tab-content">
+            <div id="activities-content">
+                <!-- Activity logs will be loaded here -->
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    Loading activity logs...
                 </div>
             </div>
         </div>

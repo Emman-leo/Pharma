@@ -94,6 +94,9 @@ function setActiveTab(tabName) {
     } else if (tabName === 'reports') {
         loadReportsData();
         userService.logActivity('accessed_reports', 'Viewed reports dashboard');
+    } else if (tabName === 'activities') {
+        loadActivityLogs();
+        userService.logActivity('accessed_activities', 'Viewed activity logs');
     }
     
     // Save to localStorage
@@ -113,7 +116,7 @@ function getAllowedTabs() {
     const profile = userService.getProfile();
     
     if (profile && profile.role === 'admin') {
-        return ['inventory', 'sales', 'reports'];
+        return ['inventory', 'sales', 'reports', 'activities']; // Added activities tab for admins
     } else {
         // Default to staff access if no profile or role is staff
         console.log('Defaulting to staff access - profile:', profile);
@@ -487,6 +490,91 @@ if (salesDetailsModal) {
             salesDetailsModal.style.display = 'none';
         }
     });
+}
+
+// Load activity logs for admin users
+async function loadActivityLogs() {
+    console.log('Loading activity logs...');
+    
+    try {
+        const { data: activities, error } = await supabase
+            .from('activity_log')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(100);
+        
+        if (error) {
+            console.error('Error loading activity logs:', error);
+            return;
+        }
+        
+        displayActivityLogs(activities);
+    } catch (error) {
+        console.error('Error in loadActivityLogs:', error);
+    }
+}
+
+function displayActivityLogs(activities) {
+    const activitiesContainer = document.getElementById('activities-content');
+    if (!activitiesContainer) {
+        console.error('Activities container not found');
+        return;
+    }
+    
+    if (!activities || activities.length === 0) {
+        activitiesContainer.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                No activity logs found
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="dashboard-header">
+            <h2><i class="fas fa-clipboard-list"></i> Activity Logs</h2>
+            <p>Recent user activities and system events</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Activities (${activities.length} total)</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    activities.forEach(activity => {
+        html += `
+            <tr>
+                <td><strong>${activity.user_name || 'Unknown User'}</strong></td>
+                <td>${activity.action}</td>
+                <td>${activity.details || 'No details'}</td>
+                <td>${formatDateTime(activity.timestamp)}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    activitiesContainer.innerHTML = html;
 }
 
 // Load reports data
