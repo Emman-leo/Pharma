@@ -1,8 +1,8 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/auth.html"
+      "src": "/",
+      "dest": "/auth.html"
     }
   ]
 }
