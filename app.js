@@ -1,8 +1,4 @@
 import { supabase } from './supabase.js';
-import { userService } from './user-service.js';
-
-// Display user info with role will be handled after initialization
-// User authentication and profile loading happens in init()
 
 // DOM Elements
 const medicineTableBody = document.getElementById('medicine-table-body');
@@ -34,9 +30,6 @@ const salesDetailsModal = document.getElementById('sales-details-modal');
 const salesDetailsContent = document.getElementById('sales-details-content');
 const salesDetailsClose = salesDetailsModal?.querySelector('.close');
 
-// The user email is now handled in the user service initialization
-// Display user info with role happens after user service initialization
-
 // Global variables
 let medicines = [];
 let filteredMedicines = [];
@@ -46,102 +39,71 @@ let currentSaleId = 1;
 // Tab Navigation with Persistence and Role-Based Access
 function setActiveTab(tabName) {
     console.log('Setting active tab:', tabName);
-    
-    // Check if user has permission to access this tab
-    if (!canAccessTab(tabName)) {
-        console.log(`User ${userService.getProfile()?.role || 'unknown'} cannot access ${tabName} tab`);
-        // Redirect to first allowed tab
-        const firstAllowedTab = getAllowedTabs()[0] || 'sales';
-        if (firstAllowedTab !== tabName) {
-            console.log('Redirecting to allowed tab:', firstAllowedTab);
-            setActiveTab(firstAllowedTab);
-            return;
-        }
-    }
-    
+
     // Update active tab button
     tabButtons.forEach(btn => {
         btn.classList.remove('active');
-        // Also remove any style overrides
         btn.style.removeProperty('display');
         btn.style.removeProperty('visibility');
     });
-    
+
     const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
     if (activeButton) {
         activeButton.classList.add('active');
     }
-    
+
     // Show corresponding content
     tabContents.forEach(content => {
         content.classList.remove('active');
-        // Also remove any style overrides
         content.style.removeProperty('display');
         content.style.removeProperty('visibility');
-        
+
         if (content.id === `${tabName}-tab`) {
             content.classList.add('active');
         }
     });
-    
+
     // Refresh data based on tab
     if (tabName === 'inventory') {
         refreshMedicines();
-        userService.logActivity('accessed_inventory', 'Viewed inventory management');
     } else if (tabName === 'sales') {
         loadSalesData();
-        userService.logActivity('accessed_sales', 'Viewed sales interface');
     } else if (tabName === 'reports') {
         loadReportsData();
-        userService.logActivity('accessed_reports', 'Viewed reports dashboard');
     } else if (tabName === 'activities') {
         loadActivityLogs();
-        userService.logActivity('accessed_activities', 'Viewed activity logs');
     }
-    
+
     // Save to localStorage
     localStorage.setItem('activeTab', tabName);
     console.log('Active tab set to:', tabName);
 }
 
-// Check if user can access a specific tab
+// Get tabs allowed for current user role
+function getAllowedTabs() {
+    return ['inventory', 'sales', 'reports', 'activities'];
+}
+
 function canAccessTab(tabName) {
     const allowedTabs = getAllowedTabs();
     return allowedTabs.includes(tabName);
 }
 
-// Get tabs allowed for current user role
-function getAllowedTabs() {
-    // Check if we have a user profile loaded
-    const profile = userService.getProfile();
-    
-    if (profile && profile.role === 'admin') {
-        return ['inventory', 'sales', 'reports', 'activities']; // Added activities tab for admins
-    } else {
-        // Default to staff access if no profile or role is staff
-        console.log('Defaulting to staff access - profile:', profile);
-        return ['sales']; // Staff can only access sales
-    }
-}
-
 // Safe way to check user role
 function isUserAdmin() {
-    const profile = userService.getProfile();
-    return profile && profile.role === 'admin';
+    return true;
 }
 
 // Safe way to check if user is staff
 function isUserStaff() {
-    const profile = userService.getProfile();
-    // Default to staff if no profile is loaded
-    return !profile || !profile.role || profile.role === 'staff';
+    return false;
 }
 
 // Initialize tab visibility based on user role
 function initializeTabVisibility() {
     const allowedTabs = getAllowedTabs();
     console.log('Initializing tab visibility for allowed tabs:', allowedTabs);
-    
+
     tabButtons.forEach(button => {
         const tabName = button.dataset.tab;
         console.log('Processing tab button:', tabName, 'Allowed:', allowedTabs.includes(tabName));
@@ -155,7 +117,7 @@ function initializeTabVisibility() {
             button.style.visibility = 'hidden';
         }
     });
-    
+
     // Hide tab content for unauthorized tabs
     tabContents.forEach(content => {
         const tabName = content.id.replace('-tab', '');
@@ -170,24 +132,23 @@ function initializeTabVisibility() {
             content.style.visibility = 'hidden';
         }
     });
-    
+
     // Force reflow to ensure changes take effect
     document.body.offsetHeight;
 }
 
 // Load saved tab on page load
 function loadSavedTab() {
-    // Wait a bit to ensure DOM is fully loaded and user service is initialized
+    // Wait a bit to ensure DOM is fully loaded
     setTimeout(() => {
         const allowedTabs = getAllowedTabs();
         const savedTab = localStorage.getItem('activeTab');
         
-        // Check if saved tab is allowed for current user, otherwise use first allowed tab
         const tabToLoad = savedTab && allowedTabs.includes(savedTab) ? savedTab : allowedTabs[0] || 'sales';
         
         console.log('Loading tab:', tabToLoad, 'from saved:', savedTab, 'allowed:', allowedTabs);
         setActiveTab(tabToLoad);
-    }, 100); // Small delay to ensure everything is initialized
+    }, 100);
 }
 
 // Tab click handlers
@@ -196,12 +157,10 @@ tabButtons.forEach(button => {
         const tabName = button.dataset.tab;
         console.log('Tab clicked:', tabName);
         
-        // Check if user has access to this tab
         if (canAccessTab(tabName)) {
             setActiveTab(tabName);
         } else {
             console.log('Access denied to tab:', tabName);
-            // Optionally show an alert
             alert('You do not have permission to access this tab.');
         }
     });
@@ -281,7 +240,6 @@ function updateCartDisplay() {
         cartItemsContainer.appendChild(cartItemElement);
     });
     
-    // Add event listeners after elements are created
     attachCartEventListeners();
     
     cartTotalElement.textContent = formatCurrency(total);
@@ -289,7 +247,6 @@ function updateCartDisplay() {
 }
 
 function attachCartEventListeners() {
-    // Remove existing listeners to prevent duplicates
     document.querySelectorAll('.decrease-btn').forEach(btn => {
         btn.removeEventListener('click', handleDecreaseClick);
         btn.addEventListener('click', handleDecreaseClick);
@@ -323,7 +280,6 @@ function handleRemoveClick(event) {
 
 function decreaseQuantity(index) {
     console.log('Decreasing quantity for index:', index);
-    console.log('Current cart items:', cartItems);
     
     if (cartItems[index].quantity > 1) {
         cartItems[index].quantity -= 1;
@@ -339,7 +295,6 @@ function decreaseQuantity(index) {
 
 function increaseQuantity(index) {
     console.log('Increasing quantity for index:', index);
-    console.log('Current cart items:', cartItems);
     
     const item = cartItems[index];
     const medicine = medicines.find(m => m.id === item.id);
@@ -355,7 +310,6 @@ function increaseQuantity(index) {
 
 function removeFromCart(index) {
     console.log('Removing item at index:', index);
-    console.log('Current cart items:', cartItems);
     
     const itemName = cartItems[index].name;
     cartItems.splice(index, 1);
@@ -381,10 +335,6 @@ async function loadSalesData() {
         
         displaySalesHistory(sales);
         
-        // Log activity for staff users
-        if (userService.isStaff()) {
-            userService.logActivity('viewed_sales_history', `Viewed ${sales ? sales.length : 0} recent sales records`);
-        }
     } catch (error) {
         console.error('Error in loadSalesData:', error);
     }
@@ -405,7 +355,6 @@ function displaySalesHistory(sales) {
         return;
     }
     
-    // Group sales by date/customer to show as transactions
     const groupedSales = groupSalesByTransaction(sales);
     
     salesTableBody.innerHTML = '';
@@ -431,11 +380,9 @@ function displaySalesHistory(sales) {
 
 // Show detailed sale information in modal
 function showSaleDetailsModal(sale) {
-    // Create or get the modal element
     let modal = document.getElementById('sale-details-modal');
     
     if (!modal) {
-        // Create the modal if it doesn't exist
         modal = document.createElement('div');
         modal.id = 'sale-details-modal';
         modal.className = 'modal';
@@ -447,7 +394,6 @@ function showSaleDetailsModal(sale) {
         `;
         document.body.appendChild(modal);
         
-        // Add event listeners
         const closeBtn = modal.querySelector('.close');
         closeBtn.addEventListener('click', () => {
             modal.style.display = 'none';
@@ -460,7 +406,6 @@ function showSaleDetailsModal(sale) {
         });
     }
     
-    // Format the sale details
     const content = document.getElementById('sale-details-content');
     content.innerHTML = `
         <h2><i class="fas fa-receipt"></i> Sale Details</h2>
@@ -510,16 +455,12 @@ function showSaleDetailsModal(sale) {
         </div>
     `;
     
-    // Show the modal
     modal.style.display = 'block';
 }
 
-// Print sale receipt
 window.printSaleReceipt = function(saleId) {
-    // Create printable receipt
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     
-    // Get sale details (you'd fetch this from database in real implementation)
     const sale = {
         id: saleId,
         customer_name: 'Walk-in Customer',
@@ -607,7 +548,6 @@ window.printSaleReceipt = function(saleId) {
 }
 
 function groupSalesByTransaction(sales) {
-    // Group individual sales records by date and customer to form transactions
     const grouped = {};
     
     sales.forEach(sale => {
@@ -637,12 +577,10 @@ function groupSalesByTransaction(sales) {
     return Object.values(grouped).sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
 }
 
-// Make the function globally available
 window.viewSaleDetails = async function(saleId) {
     console.log('View button clicked for sale ID:', saleId);
     
     try {
-        // Fetch detailed sale information
         const { data: saleDetails, error } = await supabase
             .from('sales')
             .select('*')
@@ -660,7 +598,6 @@ window.viewSaleDetails = async function(saleId) {
             return;
         }
         
-        // Display detailed modal
         showSaleDetailsModal(saleDetails);
         
     } catch (error) {
@@ -669,13 +606,6 @@ window.viewSaleDetails = async function(saleId) {
     }
 };
 
-// Test function for debugging
-window.testViewFunction = function() {
-    console.log('Test view function called');
-    viewSaleDetails(999); // Test with a dummy ID
-};
-
-// Add event listener for sales details modal close button
 if (salesDetailsClose) {
     salesDetailsClose.addEventListener('click', () => {
         if (salesDetailsModal) {
@@ -684,7 +614,6 @@ if (salesDetailsClose) {
     });
 }
 
-// Close modal when clicking outside
 if (salesDetailsModal) {
     salesDetailsModal.addEventListener('click', (event) => {
         if (event.target === salesDetailsModal) {
@@ -693,7 +622,6 @@ if (salesDetailsModal) {
     });
 }
 
-// Load activity logs for admin users
 async function loadActivityLogs() {
     console.log('Loading activity logs...');
     
@@ -778,11 +706,9 @@ function displayActivityLogs(activities) {
     activitiesContainer.innerHTML = html;
 }
 
-// Load reports data
 async function loadReportsData() {
     console.log('Loading reports data...');
     try {
-        // Get today's sales - using proper date range with timezone handling
         const today = new Date();
         const todayStart = new Date(today.setHours(0, 0, 0, 0));
         const todayEnd = new Date(today.setHours(23, 59, 59, 999));
@@ -821,19 +747,14 @@ async function loadReportsData() {
         
         console.log('Calculated totals - Today:', todayTotal, 'Yesterday:', yesterdayTotal);
         
-        // Get this month's sales - using proper date filtering
         const now = new Date();
         const year = now.getFullYear();
-        const month = now.getMonth(); // 0-based
+        const month = now.getMonth();
         
-        // First day of current month
         const monthStart = new Date(year, month, 1);
-        // Last day of current month
         const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
         
-        // First day of last month
         const lastMonthStart = new Date(year, month - 1, 1);
-        // Last day of last month
         const lastMonthEnd = new Date(year, month, 0, 23, 59, 59, 999);
         
         console.log('Current month range:', monthStart.toISOString(), 'to', monthEnd.toISOString());
@@ -866,12 +787,11 @@ async function loadReportsData() {
         
         console.log('Calculated monthly totals - Current:', monthTotal, 'Last:', lastMonthTotal);
         
-        // Get best selling product
         const { data: bestSellingData, error: bestSellingError } = await supabase
             .from('sales')
             .select('product_name, quantity_sold')
             .order('sale_date', { ascending: false })
-            .limit(100); // Get more data to calculate properly
+            .limit(100);
         
         console.log('Best selling raw data:', bestSellingData, bestSellingError);
         
@@ -879,7 +799,6 @@ async function loadReportsData() {
         let bestSellingUnits = 0;
         
         if (bestSellingData && !bestSellingError && bestSellingData.length > 0) {
-            // Group by product and sum quantities
             const productTotals = {};
             bestSellingData.forEach(sale => {
                 const productName = sale.product_name;
@@ -887,7 +806,6 @@ async function loadReportsData() {
                 productTotals[productName] = (productTotals[productName] || 0) + quantity;
             });
             
-            // Find product with highest total
             let maxUnits = 0;
             for (const [product, total] of Object.entries(productTotals)) {
                 if (total > maxUnits) {
@@ -900,7 +818,6 @@ async function loadReportsData() {
         
         console.log('Best selling calculated:', bestSelling, 'Units:', bestSellingUnits);
         
-        // Get active products count
         const { data: inventoryData, error: inventoryError } = await supabase
             .from('inventory')
             .select('quantity')
@@ -910,7 +827,6 @@ async function loadReportsData() {
         
         console.log('Active products:', activeProducts, inventoryData, inventoryError);
         
-        // Update dashboard stats
         console.log('Updating dashboard with values:', {
             todaySales: todayTotal,
             monthSales: monthTotal,
@@ -925,7 +841,6 @@ async function loadReportsData() {
         document.getElementById('best-selling-units').textContent = `${bestSellingUnits} units sold`;
         document.getElementById('active-products').textContent = activeProducts;
         
-        // Update trends
         const todayTrend = document.getElementById('today-trend');
         const monthTrend = document.getElementById('month-trend');
         
@@ -945,7 +860,6 @@ async function loadReportsData() {
             monthTrend.className = 'stat-trend down';
         }
         
-        // Render charts
         renderCharts();
         
         console.log('Reports data loaded successfully');
@@ -958,14 +872,11 @@ async function loadReportsData() {
         document.getElementById('best-selling-units').textContent = '0 units sold';
         document.getElementById('active-products').textContent = '0';
         
-        // Show error notification
         showNotification('Error loading reports data: ' + error.message, 'error');
     }
 }
 
-// Render charts (placeholder implementation)
 function renderCharts() {
-    // Sales trend chart placeholder
     const salesChart = document.getElementById('sales-trend-chart');
     if (salesChart) {
         salesChart.parentElement.innerHTML = `
@@ -977,7 +888,6 @@ function renderCharts() {
         `;
     }
     
-    // Category distribution chart placeholder
     const categoryChart = document.getElementById('category-distribution-chart');
     if (categoryChart) {
         categoryChart.parentElement.innerHTML = `
@@ -990,7 +900,6 @@ function renderCharts() {
     }
 }
 
-// Format currency
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-GH', {
         style: 'currency',
@@ -998,21 +907,18 @@ function formatCurrency(amount) {
     }).format(amount);
 }
 
-// Format date
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString();
 }
 
-// Format date and time
 function formatDateTime(dateTimeString) {
     if (!dateTimeString) return 'N/A';
     const date = new Date(dateTimeString);
     return date.toLocaleString();
 }
 
-// Get date range for different periods
 function getDateRange(period) {
     const now = new Date();
     let startDate, endDate = now.toISOString().split('T')[0];
@@ -1039,15 +945,12 @@ function getDateRange(period) {
     return { startDate, endDate };
 }
 
-// Event Listeners for Sales
 if (medicineSearch) {
-    // Show dropdown when user types
     medicineSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         showMedicineSuggestions(searchTerm);
     });
     
-    // Hide dropdown when clicking elsewhere
     document.addEventListener('click', (e) => {
         if (!medicineSearch.contains(e.target) && !document.getElementById('medicine-search-results').contains(e.target)) {
             document.getElementById('medicine-search-results').style.display = 'none';
@@ -1096,14 +999,11 @@ function selectMedicine(medicine) {
     medicineSearch.value = medicine.name;
     document.getElementById('medicine-search-results').style.display = 'none';
     
-    // Check if item is already in cart
     const existingItemIndex = cartItems.findIndex(item => item.id === medicine.id);
     
     if (existingItemIndex !== -1) {
-        // If already in cart, increase quantity
         increaseQuantity(existingItemIndex);
     } else {
-        // Add new item to cart
         addToCart(medicine);
     }
 }
@@ -1126,7 +1026,6 @@ function addToCart(medicine) {
         return;
     }
     
-    // Add to cart
     const existingItem = cartItems.find(item => item.id === medicine.id);
     if (existingItem) {
         if (existingItem.quantity >= medicine.quantity) {
@@ -1173,14 +1072,11 @@ if (processSaleBtn) {
         const customerName = document.getElementById('customer-name').value || 'Walk-in Customer';
         let totalAmount = 0;
         
-        // Calculate total
         cartItems.forEach(item => {
             totalAmount += item.price * item.quantity;
         });
         
-        // Process sale
         try {
-            // Update inventory quantities
             for (const item of cartItems) {
                 const medicine = medicines.find(m => m.id === item.id);
                 if (medicine) {
@@ -1201,7 +1097,6 @@ if (processSaleBtn) {
                 }
             }
             
-            // Add individual sale records to database
             for (const item of cartItems) {
                 const saleData = {
                     product_id: item.id,
@@ -1224,19 +1119,12 @@ if (processSaleBtn) {
             
             showSalesAlert(`Sale processed successfully! Total: ${formatCurrency(totalAmount)}`, 'success');
             
-            // Log staff activity
-            if (userService.isStaff()) {
-                userService.logActivity('processed_sale', `Processed sale for ${customerName}, Total: ${formatCurrency(totalAmount)}, Items: ${cartItems.length}`);
-            }
-            
-            // Reset cart
             cartItems = [];
             document.getElementById('customer-name').value = '';
             updateCartDisplay();
             medicineSearch.value = '';
             document.getElementById('medicine-search-results').style.display = 'none';
             
-            // Refresh inventory
             await refreshMedicines();
             
         } catch (error) {
@@ -1246,12 +1134,10 @@ if (processSaleBtn) {
     });
 }
 
-// Check if medicine is low stock
 function isLowStock(quantity) {
     return quantity <= 10;
 }
 
-// Get medicines from database
 async function getMedicines() {
     console.log('Fetching medicines from database...');
     
@@ -1262,8 +1148,6 @@ async function getMedicines() {
 
     if (error) {
         console.error('Error fetching medicines:', error);
-        console.error('Error details:', error.message);
-        console.error('Error code:', error.code);
         showAlert('Error loading medicines: ' + error.message, 'error');
         return [];
     }
@@ -1272,7 +1156,6 @@ async function getMedicines() {
     return data || [];
 }
 
-// Display medicines in table
 function displayMedicines(medicinesToDisplay) {
     console.log('Displaying medicines:', medicinesToDisplay);
     medicineTableBody.innerHTML = '';
@@ -1290,10 +1173,8 @@ function displayMedicines(medicinesToDisplay) {
     }
     
     medicinesToDisplay.forEach(medicine => {
-        console.log('Processing medicine:', medicine);
         const row = document.createElement('tr');
         
-        // Highlight low stock items
         const quantityClass = isLowStock(medicine.quantity) ? 'style="color: var(--warning-color); font-weight: bold;"' : '';
         
         row.innerHTML = `
@@ -1319,7 +1200,6 @@ function displayMedicines(medicinesToDisplay) {
     });
 }
 
-// Update dashboard statistics
 function updateDashboardStats() {
     const totalMedicines = medicines.length;
     const lowStockCount = medicines.filter(med => isLowStock(med.quantity)).length;
@@ -1330,13 +1210,9 @@ function updateDashboardStats() {
     document.getElementById('total-value').textContent = formatCurrency(totalValue);
 }
 
-// Add new medicine
 async function addMedicine(event) {
     event.preventDefault();
     
-    console.log('Add medicine function called');
-    
-    const formData = new FormData(addMedicineForm);
     const medicineData = {
         name: document.getElementById('name').value,
         category: document.getElementById('category').value,
@@ -1344,12 +1220,8 @@ async function addMedicine(event) {
         price: parseFloat(document.getElementById('price').value),
         supplier: document.getElementById('supplier').value,
         expiry_date: document.getElementById('expiry-date').value
-        // Removed description field since it doesn't exist in the database schema
     };
     
-    console.log('Medicine data:', medicineData);
-    
-    // Validation
     if (medicineData.quantity < 0) {
         showAlert('Quantity cannot be negative', 'error');
         return;
@@ -1365,20 +1237,14 @@ async function addMedicine(event) {
         return;
     }
     
-    console.log('Sending to Supabase...');
-    
     const { data, error } = await supabase
         .from('inventory')
         .insert([medicineData])
         .select();
     
-    console.log('Supabase response:', { data, error });
-    
     if (error) {
         console.error('Error adding medicine:', error);
-        console.error('Error details:', error.message);
-        console.error('Error code:', error.code);
-        showAlert('Error adding medicine: ' + error.message + ' (Code: ' + error.code + ')', 'error');
+        showAlert('Error adding medicine: ' + error.message, 'error');
     } else {
         showAlert('Medicine added successfully!');
         addMedicineForm.reset();
@@ -1386,26 +1252,16 @@ async function addMedicine(event) {
     }
 }
 
-// Edit medicine
 async function editMedicine(id) {
-    console.log('Edit medicine called with ID:', id);
-    console.log('ID type:', typeof id);
-    
-    // Convert ID to appropriate type if needed
     const medicineId = typeof id === 'string' ? parseInt(id) : id;
-    console.log('Converted ID:', medicineId, 'Type:', typeof medicineId);
-    
     const medicine = medicines.find(med => med.id === medicineId);
-    console.log('Found medicine:', medicine);
     
     if (!medicine) {
         console.error('Medicine not found');
-        console.error('Available medicines:', medicines.map(m => ({id: m.id, name: m.name})));
         showAlert('Medicine not found', 'error');
         return;
     }
     
-    // Populate edit form
     document.getElementById('edit-id').value = medicine.id;
     document.getElementById('edit-name').value = medicine.name;
     document.getElementById('edit-category').value = medicine.category || '';
@@ -1414,18 +1270,9 @@ async function editMedicine(id) {
     document.getElementById('edit-supplier').value = medicine.supplier || '';
     document.getElementById('edit-expiry').value = medicine.expiry_date || '';
     
-    console.log('Form populated with:', {
-        id: medicine.id,
-        name: medicine.name,
-        category: medicine.category
-    });
-    
-    // Show modal
     editModal.style.display = 'block';
-    console.log('Edit modal displayed');
 }
 
-// Update medicine
 async function updateMedicine(event) {
     event.preventDefault();
     
@@ -1437,7 +1284,6 @@ async function updateMedicine(event) {
         price: parseFloat(document.getElementById('edit-price').value),
         supplier: document.getElementById('edit-supplier').value,
         expiry_date: document.getElementById('edit-expiry').value
-        // Removed description field since it doesn't exist in database
     };
     
     const { error } = await supabase
@@ -1455,14 +1301,8 @@ async function updateMedicine(event) {
     }
 }
 
-// Delete medicine
 async function deleteMedicine(id, name) {
-    console.log('Delete medicine called with ID:', id);
-    console.log('ID type:', typeof id);
-    
-    // Convert ID to appropriate type if needed
     const medicineId = typeof id === 'string' ? parseInt(id) : id;
-    console.log('Converted ID:', medicineId, 'Type:', typeof medicineId);
     
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
         return;
@@ -1482,7 +1322,6 @@ async function deleteMedicine(id, name) {
     }
 }
 
-// Filter medicines
 function filterMedicines() {
     const searchTerm = searchInput.value.toLowerCase();
     const categoryFilter = filterCategory.value;
@@ -1501,17 +1340,13 @@ function filterMedicines() {
     displayMedicines(filteredMedicines);
 }
 
-// Refresh medicines data
 async function refreshMedicines() {
     medicines = await getMedicines();
     filterMedicines();
     updateDashboardStats();
 }
 
-// Event Listeners
 logoutButton.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'auth.html';
 });
 
 addMedicineForm.addEventListener('submit', addMedicine);
@@ -1522,55 +1357,33 @@ searchInput.addEventListener('input', filterMedicines);
 
 filterCategory.addEventListener('change', filterMedicines);
 
-// Close modal
 if (closeModal) {
     closeModal.addEventListener('click', () => {
         editModal.style.display = 'none';
     });
 }
 
-// Close modal when clicking outside
 window.addEventListener('click', (event) => {
     if (event.target === editModal) {
         editModal.style.display = 'none';
     }
 });
 
-// Initialize the application
 async function init() {
-    // Initialize user service and check authentication
-    const currentUser = await userService.init();
-    
-    if (!currentUser) {
-        window.location.href = 'auth.html';
-        return;
+    const userActions = document.querySelector('.user-actions');
+    if(userActions) {
+        userActions.style.display = 'none';
     }
     
-    // Display user info with role
-    const userDisplay = document.getElementById('user-email');
-    const profile = userService.getProfile();
-    console.log('Profile for display:', profile);
-    
-    if (userDisplay && profile) {
-        userDisplay.textContent = `${profile.full_name} (${profile.role})`;
-    } else if (userDisplay && currentUser) {
-        // Fallback to just showing email if no profile
-        userDisplay.textContent = currentUser.email;
-    }
-    
-    // Initialize tab visibility based on user role
     initializeTabVisibility();
     
-    // Load saved tab considering user permissions
     loadSavedTab();
     
-    // Refresh medicines data
     await refreshMedicines();
     
-    console.log('Application initialized for user:', userService.getProfile());
+    console.log('Application initialized');
 }
 
-// Report Event Listeners
 const reportPeriodSelect = document.getElementById('report-period');
 const customDateRange = document.getElementById('custom-date-range');
 const generateReportBtn = document.getElementById('generate-report');
@@ -1599,7 +1412,6 @@ if (printReportBtn) {
     printReportBtn.addEventListener('click', printReport);
 }
 
-// Quick report cards
 const quickReportCards = document.querySelectorAll('.quick-report-card');
 quickReportCards.forEach(card => {
     card.addEventListener('click', function() {
@@ -1608,7 +1420,6 @@ quickReportCards.forEach(card => {
     });
 });
 
-// Generate detailed report
 async function generateDetailedReport() {
     const reportType = document.getElementById('report-type').value;
     const period = document.getElementById('report-period').value;
@@ -1851,7 +1662,6 @@ function printReport() {
 }
 
 function generateQuickReport(reportType) {
-    // Set the form values based on quick report selection
     const reportTypeSelect = document.getElementById('report-type');
     const periodSelect = document.getElementById('report-period');
     
@@ -1874,16 +1684,13 @@ function generateQuickReport(reportType) {
             break;
     }
     
-    // Show notification
     showNotification(`Generating ${reportType.replace('-', ' ')} report...`);
     
-    // Trigger report generation
     setTimeout(() => {
         generateDetailedReport();
     }, 500);
 }
 
-// Show notification
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -1915,7 +1722,6 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Add notification animations
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -1930,27 +1736,21 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Manual refresh function for debugging
 window.refreshReports = function() {
     console.log('Manually refreshing reports data...');
     loadReportsData();
 };
 
-// Make functions available globally for inline event handlers
 window.editMedicine = editMedicine;
 window.deleteMedicine = deleteMedicine;
 
-// Start the application when DOM is loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
-        // Small delay to ensure all DOM elements are fully rendered
         setTimeout(async () => {
             await init();
         }, 100);
     });
 } else {
-    // DOM is already loaded
-    // Small delay to ensure all DOM elements are fully rendered
     setTimeout(async () => {
         init();
     }, 100);
